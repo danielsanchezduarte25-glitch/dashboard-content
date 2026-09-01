@@ -2,7 +2,7 @@
 
 Panel privado para creadores de Instagram: métricas reales de tus reels (API oficial de Meta), análisis IA de cada video (hook · retención · CTA · mejoras), **Banger Hunter** para detectar qué viraliza entre tus referentes y adaptarlo a tu marca, **AI Chat** estratega con tu kit de marca y tus números, editor de **Historias** 9:16 con exportación PNG, **Variantes de video** renderizadas en el navegador y **Calendario** editorial.
 
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/GITHUB_USER/dashboard-content)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/danielsanchezduarte25-glitch/dashboard-content)
 
 **Guía completa de instalación (Netlify + app de Meta + opcionales): [docs/SETUP.md](docs/SETUP.md)**
 

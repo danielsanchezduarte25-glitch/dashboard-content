@@ -6,7 +6,7 @@ Tiempo total: unos 20 minutos. Tres bloques: (1) publicar en Netlify, (2) crear 
 
 ## 1. Publicar en Netlify (5 min)
 
-1. Abrí el botón **Deploy to Netlify** del README (o entrá a `https://app.netlify.com/start/deploy?repository=https://github.com/TU_USUARIO/dashboard-content`).
+1. Abrí el botón **Deploy to Netlify** del README (o entrá a `https://app.netlify.com/start/deploy?repository=https://github.com/danielsanchezduarte25-glitch/dashboard-content`).
 2. Netlify te pide conectar GitHub y clona el repo en tu cuenta.
 3. Te pide tres variables:
    - `APP_PASSWORD`: la contraseña con la que vas a entrar al panel. Inventá una larga.
