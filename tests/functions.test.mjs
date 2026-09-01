@@ -7,7 +7,7 @@ process.env.NODE_ENV = 'test';
 process.env.APP_PASSWORD = 'secret';
 process.env.SESSION_SECRET = 's3cret';
 process.env.IG_APP_ID = 'app'; process.env.IG_APP_SECRET = 'shh';
-process.env.ANTHROPIC_API_KEY = 'sk-test'; process.env.SUPADATA_API_KEY = 'sd-test';
+process.env.ANTHROPIC_API_KEY = 'sk-ant-test'; process.env.SUPADATA_API_KEY = 'sd-test';
 process.env.URL = 'https://dc.test';
 
 await import('../scripts/mock-external.mjs');
