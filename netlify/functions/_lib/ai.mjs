@@ -6,7 +6,7 @@ const MODEL = () => env('ANTHROPIC_MODEL', 'claude-sonnet-4-5');
 
 export async function claude({ system, messages, max_tokens = 1800, temperature = 0.6 }) {
   const key = env('ANTHROPIC_API_KEY');
-  if (!key) throw Object.assign(new Error('Falta ANTHROPIC_API_KEY en Netlify.'), { status: 500 });
+  if (!key || !/^sk-ant-/.test(key)) throw Object.assign(new Error('Falta una ANTHROPIC_API_KEY válida en Netlify (empieza con sk-ant-).'), { status: 500 });
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },

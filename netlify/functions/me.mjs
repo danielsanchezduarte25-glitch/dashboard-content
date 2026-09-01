@@ -8,8 +8,8 @@ export default async (req) => {
   const session = getSession(req);
   const cfg = {
     hasPassword: !!env('APP_PASSWORD'),
-    hasAnthropic: !!env('ANTHROPIC_API_KEY'),
-    hasSupadata: !!env('SUPADATA_API_KEY'),
+    hasAnthropic: /^sk-ant-/.test(env('ANTHROPIC_API_KEY', '')),
+    hasSupadata: (env('SUPADATA_API_KEY', '') || '').length > 10,
     hasInstagramApp: !!env('IG_APP_ID') && !!env('IG_APP_SECRET'),
     hasApify: !!env('APIFY_TOKEN'),
     googleClientId: env('GOOGLE_CLIENT_ID', null),
