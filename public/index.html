@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Dashboard Content</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ff4d8d'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='41' font-family='sans-serif' font-weight='700' font-size='24' fill='white' text-anchor='middle'%3EDC%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div class="login" id="login">
+  <form class="box" id="loginForm">
+    <div class="brand"><div class="logo">DC</div><div><b>Dashboard</b><span>Content</span></div></div>
+    <h1 style="font-size:18px">Entrar</h1>
+    <p class="sub" style="font-size:13px">Este panel es privado. Ingresá la contraseña que configuraste en Netlify (<code style="font-family:var(--mono);font-size:12px">APP_PASSWORD</code>).</p>
+    <input type="password" id="pw" placeholder="Contraseña" autocomplete="current-password" autofocus>
+    <button class="btn primary" type="submit">Entrar</button>
+    <div class="err" id="loginErr"></div>
+  </form>
+</div>
+
+<!-- ================= APP ================= -->
+<div class="app hidden" id="app">
+<aside class="side">
+  <div class="brand"><div class="logo">DC</div><div><b>Dashboard</b><span>Content</span></div></div>
+  <nav class="nav" id="nav">
+    <button data-view="dashboard" class="active"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
+    <button data-view="instagram"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor"/></svg>Instagram</button>
+    <button data-view="inspiracion"><svg viewBox="0 0 24 24"><path d="M12 2c1 4 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 1-3s0 3 2 3c-1-4 1-7 1-9z"/><path d="M8 18c0 2 2 4 4 4s4-2 4-4"/></svg>Inspiración</button>
+    <button data-view="chat"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>AI Chat</button>
+    <button data-view="historias"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M9 6h6M9 9h4"/></svg>Historias</button>
+    <button data-view="variantes"><svg viewBox="0 0 24 24"><path d="M4 7h7l3 5-3 5H4M13 7h7M13 17h7M17 12h3"/></svg>Variantes</button>
+    <button data-view="calendario"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario</button>
+    <button data-view="ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Ajustes</button>
+  </nav>
+  <div class="spacer"></div>
+  <div class="user"><div class="avatar" id="avatar">DS</div><div><div style="font-weight:600;font-size:13px" id="userName">—</div><small id="userHandle"></small></div></div>
+  <button class="logout" id="logoutBtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"/></svg>Cerrar sesión</button>
+</aside>
+
+<main class="main">
+<div class="setup" id="setup"></div>
+
+<!-- DASHBOARD -->
+<section class="view active" id="view-dashboard">
+  <div class="page-h">
+    <div><h1 id="greet">Hola.</h1><p class="sub" id="greetSub">Resumen ejecutivo de Dashboard Content</p></div>
+    <div style="display:flex;gap:8px;align-items:center"><span class="small" id="syncedAt"></span><button class="btn" id="syncBtn"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>Sincronizar</button></div>
+  </div>
+  <div id="dashBody"></div>
+</section>
+
+<!-- INSTAGRAM -->
+<section class="view" id="view-instagram">
+  <div class="page-h">
+    <div><h1>Dashboard Content</h1><p class="sub">Análisis profundo de tus Reels · métricas privadas vía Meta Graph API + análisis IA por video.</p></div>
+    <button class="btn" onclick="syncReels()"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>Sincronizar Reels</button>
+  </div>
+  <div class="toolbar">
+    <div class="tabs" id="reelTabs">
+      <button class="tab active" data-f="all">Todos los reels (<span id="reelCount">0</span>)</button>
+      <button class="tab" data-f="recent">Recientes</button>
+      <button class="tab" data-f="views">Más vistos</button>
+      <button class="tab" data-f="er">Mejor ER</button>
+      <button class="tab" data-f="analyzed">Con análisis IA</button>
+    </div>
+    <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="reelSearch" placeholder="Buscar en captions…"></label>
+  </div>
+  <div class="grid reels" id="reelGrid"></div>
+</section>
+
+<!-- INSPIRACIÓN -->
+<section class="view" id="view-inspiracion">
+  <div class="page-h">
+    <div><h1>Inspiración</h1><p class="sub">Banger Hunter: detectá qué está viralizando entre tus referentes y adaptalo a tu marca.</p></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div><h2>Tus referentes</h2><p class="sub" style="font-size:13px;margin-top:2px">Cuentas que escaneás seguido. Un banger = supera el umbral viral de su propia cuenta (score ≥ 80).</p></div>
+      <button class="btn primary" id="scanBtn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Escanear referentes</button>
+    </div>
+    <div class="chips" id="refChips"></div>
+    <div class="scan" id="scanStatus"></div>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:14px" id="inspTools">
+    <div class="card">
+      <h2>Investigar cuenta</h2>
+      <p class="sub" style="font-size:13px;margin-top:2px">Analizá cualquier cuenta pública una sola vez. Los resultados no se almacenan, salvo los que guardés.</p>
+      <div class="field" style="margin-top:12px"><input id="investInput" placeholder="@cuenta"><button class="btn" id="investBtn">Analizar</button></div>
+      <div id="investOut" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2>Agregar reels por URL</h2>
+      <p class="sub" style="font-size:13px;margin-top:2px">Pegá links de reels (Instagram, TikTok, YouTube), uno por línea. Se leen vistas, likes y comentarios, y se calcula el score contra la mediana de esa cuenta.</p>
+      <textarea class="textarea" id="urlsInput" placeholder="https://www.instagram.com/reel/…&#10;https://www.tiktok.com/@…/video/…" style="margin-top:12px"></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" id="urlsBtn">Agregar</button></div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin:22px 0 12px;flex-wrap:wrap;gap:10px">
+    <div><h2>Bangers detectados</h2><p class="sub" style="font-size:13px;margin-top:2px">Videos que superaron el umbral viral (score ≥ 80) en tus escaneos de referentes.</p></div>
+    <div class="tabs" id="bangerSort"><button class="tab active" data-s="x">Por multiplicador</button><button class="tab" data-s="views">Por vistas</button><button class="tab" data-s="date">Más nuevos</button><button class="tab" data-s="all">Todos (incl. &lt; 80)</button></div>
+  </div>
+  <div class="grid bangers" id="bangerGrid"></div>
+</section>
+
+<!-- AI CHAT -->
+<section class="view" id="view-chat">
+  <div class="page-h">
+    <div><h1>AI Chat</h1><p class="sub">Tu estratega personal: conoce tu kit de marca, tus reels y tus números.</p></div>
+  </div>
+  <div class="chatwrap">
+    <div class="card convs" id="convList"></div>
+    <div class="card chat">
+      <div class="msgs" id="msgs"></div>
+      <div class="sugg" id="sugg"></div>
+      <div class="composer"><textarea id="chatInput" placeholder="Preguntale a tu estratega… (Enter para enviar)"></textarea><button class="btn primary" id="sendBtn">Enviar</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- HISTORIAS -->
+<section class="view" id="view-historias">
+  <div class="page-h">
+    <div><h1>Historias</h1><p class="sub">Armá secuencias de stories 9:16, superponé texto e imágenes, dibujá y exportalas como PNG listos para subir.</p></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h2>Tus secuencias</h2><p class="sub" style="font-size:13px;margin-top:2px">Cada secuencia guarda sus slides y capas de texto.</p></div><button class="btn" onclick="newSeq()">+ Nueva secuencia</button></div>
+    <div class="seqs" id="seqList"></div>
+  </div>
+  <div class="editor">
+    <div class="card canvaswrap">
+      <div class="ed-tools">
+        <input id="seqName" value="Nueva secuencia" style="background:none;border:0;font-family:var(--display);font-weight:600;font-size:15px;outline:0;color:var(--ink);width:220px">
+        <div class="tabs" id="edMode">
+          <button class="tab active" data-m="move"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20M8 6l4-4 4 4M8 18l4 4 4-4M6 8 2 12l4 4M18 8l4 4-4 4"/></svg>Mover</button>
+          <button class="tab" data-m="draw"><svg viewBox="0 0 24 24"><path d="M3 21c3-1 5-3 5-3l10-10-3-3L5 15s-2 3-2 6z"/></svg>Dibujar</button>
+          <button class="tab active" data-m="snap"><svg viewBox="0 0 24 24"><path d="M6 3v8a6 6 0 0 0 12 0V3M4 3h4M16 3h4"/></svg>Imantar</button>
+          <button class="tab" data-m="guides"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg>Guías</button>
+        </div>
+        <div style="display:flex;gap:6px"><button class="btn sm" onclick="exportZip()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>Exportar ZIP</button><button class="btn sm primary" onclick="saveSeq()">Guardar</button></div>
+      </div>
+      <div class="stage">
+        <div class="story" id="story">
+          <div class="bgimg" id="storyBg"></div>
+          <div class="dim" id="storyDim"></div>
+          <canvas id="drawLayer" width="270" height="480" style="position:absolute;inset:0;pointer-events:none"></canvas>
+          <div class="guide v" id="gv"></div><div class="guide h" id="gh"></div>
+        </div>
+      </div>
+      <div class="ed-hint">Arrastrá las capas · Alt = libre (sin imantar) · flechas = 1px (Shift = 10px) · Supr borra la capa · Exportar ZIP genera PNG 1080×1920</div>
+      <div class="filmstrip" id="filmstrip"></div>
+    </div>
+    <div class="card props">
+      <div class="eyebrow"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/></svg>Fondo del slide <span id="slideIdx">1</span></div>
+      <div class="field"><input id="bgUrl" placeholder="Pegá una URL de imagen…"><button class="btn sm" onclick="applyBgUrl()">Aplicar</button></div>
+      <div class="btnrow"><label class="btn sm" style="cursor:pointer">⬆ Subir de la PC<input type="file" id="bgFile" accept="image/*" hidden></label><button class="btn sm" onclick="randomBg()">⤭ Aleatorio</button><button class="btn sm" onclick="setBg(null)">✕ Quitar</button><button class="btn sm" id="driveBtn" style="display:none">▲ Google Drive</button></div>
+      <div class="range"><div class="lbl"><span>Oscurecer fondo</span><span id="brightVal">30%</span></div><input type="range" id="bright" min="0" max="90" value="30"></div>
+      <div class="eyebrow" style="margin-top:4px">O elegí de tu biblioteca</div>
+      <div class="drive" id="driveNote"><i style="background:var(--faint)"></i>Fondos y tus fotos subidas</div>
+      <div class="lib" id="lib"></div>
+      <div class="eyebrow" style="margin-top:8px">Capas de texto</div>
+      <div class="textstyles">
+        <button style="background:#1f6feb;color:#fff;border-color:#1f6feb" onclick="addLayer('blue')">Aa</button>
+        <button style="background:#fff;color:#000" onclick="addLayer('white')">Aa</button>
+        <button style="background:#0c0d10;color:#fff" onclick="addLayer('black')">Aa</button>
+        <button style="background:none;color:#fff" onclick="addLayer('plain')">Aa</button>
+        <button style="background:rgba(255,255,255,.9);color:#000;border-radius:10px" onclick="addLayer('chatbox')">💬</button>
+      </div>
+      <div class="field"><textarea class="textarea" id="layerText" placeholder="Texto de la capa seleccionada" style="min-height:56px"></textarea></div>
+      <div class="btnrow"><button class="btn sm" onclick="dupLayer()">Duplicar capa</button><button class="btn sm" onclick="delLayer()">Eliminar capa</button><button class="btn sm" onclick="clearDrawing()">Borrar dibujo</button></div>
+      <div class="eyebrow" style="margin-top:8px;color:var(--faint)" id="draftNote"></div>
+    </div>
+  </div>
+</section>
+
+<!-- VARIANTES -->
+<section class="view" id="view-variantes">
+  <div class="page-h">
+    <div><h1>Variantes de video</h1><p class="sub">Generá múltiples re-ediciones de un mismo video (micro-ajustes de color, velocidad y encuadre) para testear cuál rinde mejor, y mandalas al calendario como reels de prueba. El render ocurre en tu navegador (ffmpeg.wasm): nada se sube a un servidor.</p></div>
+  </div>
+  <div class="steps">
+    <div class="card step"><h2><span class="sn">1</span>Elegí el video base</h2>
+      <div class="base" style="flex-wrap:wrap"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9 5 3-5 3z"/></svg></div><div style="flex:1;min-width:200px"><b id="baseTitle">Elegí un reel o subí un MP4</b><small id="baseInfo">Fuente: reel existente · el archivo MP4 lo subís desde tu PC (Instagram no permite descargarlo por API).</small><a href="#" id="baseLink" target="_blank" rel="noopener">↗ Ver original</a></div><select id="baseSel"></select></div>
+      <div class="dropzone" id="dropzone" style="margin-top:10px">Arrastrá el MP4 del reel acá o hacé clic para elegirlo<input type="file" id="videoFile" accept="video/mp4,video/quicktime" hidden></div>
+      <div class="small" id="videoInfo" style="margin-top:6px"></div>
+    </div>
+    <div class="card step"><h2><span class="sn">2</span>Configuración</h2>
+      <div class="cfg">
+        <div class="range"><div class="lbl"><span>Cantidad de variantes</span><span><b id="nVar">5</b> · rango 5–10</span></div><input type="range" id="nVarRange" min="5" max="10" value="5"></div>
+        <div style="display:flex;gap:8px"><button class="btn sm ghost" id="advBtn">Mostrar rangos avanzados de re-edición</button><button class="btn primary" id="genBtn">✦ Generar variantes</button></div>
+      </div>
+      <div class="adv" id="adv" style="display:none">
+        <div><div class="lbl"><span>Velocidad</span><span id="spdLbl"></span></div><input type="range" id="spd" min="0" max="12" value="8"></div>
+        <div><div class="lbl"><span>Zoom / encuadre</span><span id="zoomLbl"></span></div><input type="range" id="zoom" min="0" max="12" value="8"></div>
+        <div><div class="lbl"><span>Contraste</span><span id="conLbl"></span></div><input type="range" id="con" min="0" max="20" value="8"></div>
+        <div><div class="lbl"><span>Saturación</span><span id="satLbl"></span></div><input type="range" id="sat" min="0" max="20" value="10"></div>
+        <div><div class="lbl"><span>Temperatura</span><span id="tmpLbl"></span></div><input type="range" id="tmp" min="0" max="10" value="4"></div>
+        <div><div class="lbl"><span>Recorte inicial</span><span id="trimLbl"></span></div><input type="range" id="trim" min="0" max="10" value="6"></div>
+      </div>
+      <div class="progress" id="ffProgress" style="display:none"><i style="width:0"></i></div>
+      <div class="small" id="ffStatus"></div>
+    </div>
+    <div class="card step"><h2><span class="sn">3</span>Textos en pantalla <span class="eyebrow" style="margin-left:8px;text-transform:none;letter-spacing:0">(opcional)</span></h2>
+      <p class="sub" style="font-size:13px;margin:-6px 0 12px">Un texto distinto por variante es la re-edición que más “despega” una copia de la otra: cambia píxeles en una zona grande y le da a cada versión un gancho propio. Las que dejés vacías salen sin texto.</p>
+      <div class="texts" id="textRows"></div>
+    </div>
+  </div>
+  <div class="grid variants" id="variantGrid"></div>
+</section>
+
+<!-- CALENDARIO -->
+<section class="view" id="view-calendario">
+  <div class="page-h">
+    <div><h1>Calendario</h1><p class="sub">Planificá reels, stories y variantes de prueba. Hacé clic en un día para agendar.</p></div>
+  </div>
+  <div class="card">
+    <div class="cal-h">
+      <button class="iconbtn" onclick="shiftMonth(-1)"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button>
+      <h2 id="calTitle"></h2>
+      <button class="iconbtn" onclick="shiftMonth(1)"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+      <div class="legend"><span><i style="background:var(--accent)"></i>Reel</span><span><i style="background:var(--warn)"></i>Story</span><span><i style="background:var(--info)"></i>Variante de prueba</span><span><i style="background:var(--faint)"></i>Publicado</span></div>
+    </div>
+    <div class="cal" id="cal"></div>
+  </div>
+  <div class="card upnext"><div class="eyebrow">Próximos 7 días</div><div id="upnext" style="margin-top:10px"></div></div>
+</section>
+
+<!-- AJUSTES -->
+<section class="view" id="view-ajustes">
+  <div class="page-h"><div><h1>Ajustes</h1><p class="sub">Conexiones, objetivos y kit de marca (lo que la IA sabe de vos).</p></div></div>
+  <div class="grid" style="grid-template-columns:1fr 1fr">
+    <div class="card"><h2>Conexiones</h2><div id="connBody" style="margin-top:12px"></div></div>
+    <div class="card"><h2>Objetivos</h2><div class="formgrid" style="margin-top:12px">
+      <label>Seguidores objetivo<input type="number" id="gFollowers"></label>
+      <label>Views orgánicas objetivo<input type="number" id="gViews"></label>
+      <label>Reels por mes<input type="number" id="gReels"></label>
+      <label>Guardados por reel<input type="number" id="gSaves"></label>
+    </div><div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn primary" id="saveGoals">Guardar objetivos</button></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h2>Kit de marca</h2><p class="sub" style="font-size:13px;margin-top:2px">Esto se inyecta en cada análisis, chat y adaptación. Cuanto más concreto, mejores guiones.</p>
+    <div class="formgrid" style="margin-top:12px">
+      <label>Nombre<input id="bOwner"></label><label>Cuenta<input id="bHandle"></label>
+      <label class="full">Posicionamiento<textarea id="bPositioning" rows="2"></textarea></label>
+      <label class="full">Audiencia<textarea id="bAudience" rows="2"></textarea></label>
+      <label class="full">Tono<textarea id="bTone" rows="2"></textarea></label>
+      <label class="full">Pilares (uno por línea)<textarea id="bPillars" rows="3"></textarea></label>
+      <label class="full">Estilo de CTA<input id="bCta"></label>
+      <label class="full">Evitar (uno por línea)<textarea id="bAvoid" rows="2"></textarea></label>
+    </div><div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn primary" id="saveBrand">Guardar kit de marca</button></div></div>
+</section>
+
+</main>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer"></aside>
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()"><div class="box" id="modalBox"></div></div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="/app.js"></script>
+<script src="/studio.js"></script>
+</body>
+</html>

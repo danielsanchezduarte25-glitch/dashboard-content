@@ -1,0 +1,20 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Variables that the "Deploy to Netlify" button asks for. The Instagram app ones are
+# added later from Site configuration → Environment variables (see docs/SETUP.md).
+[template.environment]
+  APP_PASSWORD = "Contraseña para entrar al panel (inventá una)"
+  SUPADATA_API_KEY = "API key de Supadata (transcripciones)"
+  ANTHROPIC_API_KEY = "API key de Anthropic (análisis IA y chat)"

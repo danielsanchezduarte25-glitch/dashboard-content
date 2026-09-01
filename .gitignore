@@ -1,0 +1,7 @@
+node_modules
+.netlify
+.env
+*.log
+receipts/
+review-receipts/
+.netlify/
