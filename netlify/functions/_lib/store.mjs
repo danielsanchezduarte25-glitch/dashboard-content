@@ -42,6 +42,7 @@ export const K = {
   profile: 'ig/profile',        // { username, name, followers_count, media_count, profile_picture_url, synced_at }
   reels: 'ig/reels',            // [ { id, caption, permalink, thumbnail_url, media_url, timestamp, views, likes, comments, reach, saves, shares } ]
   followerHistory: 'ig/followers', // [ { date, count } ]
+  syncMeta: 'ig/syncmeta',      // { synced_at, public_counts, public_error, count }
   analysis: (id) => `analysis/${id}`,
   transcript: (id) => `transcript/${id}`,
   refs: 'bangers/refs',         // [ '@cuenta' ]

@@ -110,17 +110,38 @@ async function loadReels() {
   $('#dashBody').innerHTML = spinner('Cargando tus reels…');
   try { S.reels = await api('/api/reels'); } catch (e) { $('#dashBody').innerHTML = empty('No se pudo cargar', esc(e.message)); return; }
   renderDashboard(); renderReels(); window.onReelsLoaded?.();
+  if (!S.autoSynced) { S.autoSynced = true; maybeAutoSync(); }
 }
-async function syncReels(full = false) {
+async function syncReels(full = false, { silent = false } = {}) {
   if (!S.me.instagram.connected) return connectInstagram();
+  if (S.syncing) return; S.syncing = true;
   const btn = $('#syncBtn'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Sincronizando…';
+  const restore = () => { S.syncing = false; btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>Sincronizar'; };
   try {
-    const r = await api('/api/ig/sync' + (full ? '?full=1' : ''), { method: 'POST', timeoutMs: 120000 });
-    toast(`${r.count} reels sincronizados · métricas privadas actualizadas`);
+    const start = await api('/api/ig/sync' + (full ? '?full=1' : ''), { method: 'POST', timeoutMs: 120000 });
+    if (!silent) toast('Sincronizando con Instagram… (tarda 20–60 s)', 3000);
+    // The sync runs in the background: poll until synced_at moves or an error is reported.
+    let st = null;
+    for (let i = 0; i < 60; i++) {
+      await new Promise((r) => setTimeout(r, i < 5 ? 3000 : 5000));
+      st = (await api('/api/ig/sync')).sync || {};
+      if (st.error && !st.running) throw Object.assign(new Error(st.error), { status: /conectar|token|401/i.test(st.error) ? 401 : 500 });
+      if (st.synced_at && st.synced_at !== start.since && !st.running) break;
+      if (start.inline) break;
+    }
+    if (st?.synced_at && st.synced_at !== start.since) {
+      toast(`${st.count} reels sincronizados · ${st.public_counts ? 'vistas iguales a Instagram ✓' : 'vistas orgánicas (Meta API)'}`);
+    } else if (!silent) toast('La sincronización sigue en curso; refrescá en un momento.', 5000);
     S.me = await api('/api/me'); renderUser(); renderSetup();
     await loadReels();
   } catch (e) { toast(e.message, 5000); if (e.status === 401) { S.me.instagram.connected = false; renderSetup(); } }
-  btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>Sincronizar';
+  restore();
+}
+// Auto-sync when the stored numbers are older than 6 hours (the server also syncs daily at 06:00).
+function maybeAutoSync() {
+  const at = S.reels?.sync?.synced_at || S.reels?.profile?.synced_at;
+  if (!S.me?.instagram?.connected) return;
+  if (!at || Date.now() - new Date(at).getTime() > 6 * 3600 * 1000) syncReels(false, { silent: true });
 }
 $('#syncBtn').addEventListener('click', () => syncReels(false));
 function connectInstagram() {
@@ -136,7 +157,8 @@ function renderDashboard() {
     return;
   }
   if (!d.reels.length) { $('#dashBody').innerHTML = empty('Todavía no hay reels sincronizados', 'Tocá “Sincronizar” para traer tus reels y sus métricas.', `<button class="btn primary" onclick="syncReels()">Sincronizar ahora</button>`); return; }
-  $('#syncedAt').textContent = d.profile?.synced_at ? 'Última sincronización: ' + new Date(d.profile.synced_at).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' }) : '';
+  const syncAt = d.sync?.synced_at || d.profile?.synced_at;
+  $('#syncedAt').innerHTML = syncAt ? `Última sincronización: ${new Date(syncAt).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })}${d.sync?.public_counts ? ' · <span title="Las vistas se leen del contador público de Instagram (incluye promociones), igual que en la app">vistas = Instagram ✓</span>' : ' · <span title="Solo métricas orgánicas de la API de Meta. Con APIFY_TOKEN se leen las vistas públicas (incluyen promociones)">vistas orgánicas</span>'}` : '';
   const delta = (v, suffix = '% vs mes pasado') => v == null ? '<span class="vs">sin mes anterior</span>' : `${v > 0 ? '+' : ''}${v}${suffix}`;
   const cls = (v) => (v == null ? '' : v >= 0 ? 'up' : 'down');
   const kp = [
@@ -152,7 +174,7 @@ function renderDashboard() {
   const monthName = (ym) => ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][+ym.slice(5, 7) - 1];
   const gl = [
     { l: 'Seguidores Instagram', a: k.followers || 0, b: goals.followers, n: `Faltan ${fmt(Math.max(0, goals.followers - (k.followers || 0)))}` },
-    { l: 'Views orgánicas (total)', a: k.viewsTotal, b: goals.views, n: 'Suma de vistas de todos los reels' },
+    { l: 'Vistas (total)', a: k.viewsTotal, b: goals.views, n: 'Suma de vistas de todos los reels, como las muestra Instagram' },
     { l: 'Reels publicados este mes', a: k.reelsThisMonth, b: goals.reelsPerMonth, n: `Ritmo objetivo: ${Math.round(goals.reelsPerMonth / 4)} por semana` },
     { l: 'Guardados por reel (promedio)', a: k.avgSaves, b: goals.savesPerReel, n: 'Los formatos de lista suelen duplicar el promedio' },
   ];
@@ -196,7 +218,7 @@ function niceStep(x) { const p = Math.pow(10, Math.floor(Math.log10(x || 1))); c
 let reelFilter = 'all', reelQuery = '';
 function reelCard(r) {
   const cls = r.er >= 3 ? 'hi' : r.er < 1 ? 'lo' : '';
-  return `<button class="reel" onclick="openReel('${r.id}')" aria-label="${esc(r.title)}"><div class="bgp" style="background:${gradFor(r.id)}">${r.thumbnail_url ? `<img src="${esc(r.thumbnail_url)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>${r.analyzed ? '<span class="badge">IA</span>' : ''}<div class="caption">${esc(r.title)}</div><div class="meta"><span><b>${fmt(r.views)}</b> vistas</span><span class="er ${cls}">${r.er.toFixed(2)}% ER</span></div></button>`;
+  return `<button class="reel" onclick="openReel('${r.id}')" aria-label="${esc(r.title)}"><div class="bgp" style="background:${gradFor(r.id)}">${r.thumbnail_url ? `<img src="${esc(r.thumbnail_url)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>${r.analyzed ? '<span class="badge">IA</span>' : ''}${r.promoted ? '<span class="badge promo" title="Este reel tuvo promoción pagada: las vistas incluyen anuncios">Promo</span>' : ''}<div class="caption">${esc(r.title)}</div><div class="meta"><span><b>${fmt(r.views)}</b> vistas</span><span class="er ${cls}">${r.er.toFixed(2)}% ER</span></div></button>`;
 }
 function renderReels() {
   const d = S.reels; if (!d) return;
@@ -216,8 +238,8 @@ async function openReel(id) {
   const r = S.reels?.reels.find((x) => x.id === id); if (!r) return;
   $('#drawer').innerHTML = `<button class="iconbtn close" onclick="closeDrawer()">${svgI.x}</button>
   <div class="dhead"><div class="th" style="background:${gradFor(r.id)}">${r.thumbnail_url ? `<img src="${esc(r.thumbnail_url)}" alt="" style="border-radius:8px">` : ''}</div><div><h3>${esc(r.title)}</h3><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill">${fdate(r.date)}</span><span class="pill ${r.x >= 1 ? 'good' : 'bad'}">${xfmt(r.x)} tu mediana de vistas</span></div></div></div>
-  <div class="stat3"><div class="stat"><div class="eyebrow">Views</div><div class="v">${r.views == null ? 'N/A' : r.views.toLocaleString('es')}</div></div><div class="stat"><div class="eyebrow">Likes</div><div class="v">${r.likes ?? 0}</div></div><div class="stat"><div class="eyebrow">Comments</div><div class="v">${r.comments ?? 0}</div></div></div>
-  <div class="eyebrow" style="margin-bottom:8px">Métricas privadas (Meta API oficial)</div>
+  <div class="stat3"><div class="stat"><div class="eyebrow">Views${r.promoted ? ' · promo' : ''}</div><div class="v">${r.views == null ? 'N/A' : r.views.toLocaleString('es')}</div>${r.views_organic != null && r.views_organic !== r.views ? `<div class="small" title="Lo que reporta la API de Meta sin anuncios">orgánicas ${r.views_organic.toLocaleString('es')}</div>` : ''}</div><div class="stat"><div class="eyebrow">Likes</div><div class="v">${r.likes ?? 0}</div></div><div class="stat"><div class="eyebrow">Comments</div><div class="v">${r.comments ?? 0}</div></div></div>
+  <div class="eyebrow" style="margin-bottom:8px">Métricas privadas (Meta API oficial${r.promoted ? ' · solo orgánico, sin anuncios' : ''})</div>
   <div class="stat4"><div class="stat"><div class="eyebrow">Reach</div><div class="v">${r.reach == null ? 'N/A' : r.reach.toLocaleString('es')}</div></div><div class="stat"><div class="eyebrow">Saves</div><div class="v">${r.saves ?? 'N/A'}</div></div><div class="stat"><div class="eyebrow">Shares</div><div class="v">${r.shares ?? 'N/A'}</div></div><div class="stat"><div class="eyebrow">ER %</div><div class="v">${r.er.toFixed(2)}%</div></div></div>
   <a class="btn" style="width:100%;justify-content:center" href="${esc(r.permalink)}" target="_blank" rel="noopener">${svgI.ext}Ver en Instagram</a>
   ${r.caption ? `<div class="ai"><div class="hd"><span class="eyebrow">Caption</span><button class="btn sm ghost" onclick="copyText(S.reels.reels.find(x=>x.id==='${r.id}').caption)">⧉ Copiar</button></div><div class="block transc">${esc(r.caption)}</div></div>` : ''}

@@ -354,3 +354,4 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .msg.ai pre{background:var(--panel3);padding:8px 10px;border-radius:8px;overflow:auto;font-size:12px}
 .linkish{color:var(--info);text-decoration:underline;cursor:pointer}
 .small{font-size:12px;color:var(--muted)}
+.reel .badge.promo{right:auto;left:10px;background:#f5b400;color:#1a1200}

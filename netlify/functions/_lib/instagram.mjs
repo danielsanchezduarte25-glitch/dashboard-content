@@ -107,6 +107,31 @@ export async function fetchMediaInsights(token, media) {
   }
 }
 
+// ---- Public counters (what Instagram shows in the grid) ---------------------
+// Meta's insights API only returns ORGANIC numbers: a boosted/promoted reel shows e.g. 2,035
+// views in the app but 622 in the API. The public grid counter includes paid views, so when
+// APIFY_TOKEN is set we read it and use it as the headline "views" (organic kept in views_organic).
+export async function fetchPublicCounts(username, limit = 80) {
+  const token = env('APIFY_TOKEN');
+  if (!token || !username) return null;
+  const actor = env('APIFY_ACTOR', 'apify~instagram-reel-scraper');
+  const res = await fetch(`https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items?token=${token}&timeout=100`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ username: [username], resultsLimit: limit }),
+  });
+  if (!res.ok) throw new Error(`Apify: HTTP ${res.status}`);
+  const rows = await res.json();
+  const byCode = new Map();
+  for (const r of rows) {
+    const code = r.shortCode || (r.url || '').match(/\/(?:reel|p)\/([^/?]+)/)?.[1];
+    if (!code) continue;
+    byCode.set(code, { views: r.videoPlayCount ?? r.videoViewCount ?? r.playCount ?? null, likes: r.likesCount ?? null, comments: r.commentsCount ?? null });
+  }
+  return byCode;
+}
+
+export const shortcode = (permalink) => (permalink || '').match(/\/(?:reel|p)\/([^/?]+)/)?.[1] || null;
+
 export function normalizeReel(m, ins = {}) {
   return {
     id: m.id,
@@ -120,6 +145,7 @@ export function normalizeReel(m, ins = {}) {
     timestamp: m.timestamp,
     date: m.timestamp?.slice(0, 10),
     views: ins.views ?? null,
+    views_organic: ins.views ?? null,
     likes: ins.likes ?? m.like_count ?? 0,
     comments: ins.comments ?? m.comments_count ?? 0,
     reach: ins.reach ?? null,
@@ -129,24 +155,41 @@ export function normalizeReel(m, ins = {}) {
   };
 }
 
-// Incremental by default: insights are re-fetched for reels newer than 45 days or without
-// metrics yet; older reels keep their stored numbers (they barely change). `full` refreshes all.
+// Every sync refreshes the insights of ALL reels (numbers must match Instagram exactly, and
+// old reels keep growing). `full` also walks further back in the media list.
 export async function syncAll(token, { full = false } = {}) {
   const profile = await fetchProfile(token);
-  const media = await fetchAllMedia(token, full ? 400 : 150);
+  const media = await fetchAllMedia(token, full ? 400 : 200);
   const reelsOnly = media.filter((m) => m.media_product_type === 'REELS' || m.media_type === 'VIDEO');
   const prev = (await getJSON(K.reels, [])) || [];
   const prevById = new Map(prev.map((r) => [r.id, r]));
-  const cutoff = Date.now() - 45 * 86400000;
-  const reels = await mapLimit(reelsOnly, 5, async (m) => {
+  // Public counters in parallel with the insights calls (optional; needs APIFY_TOKEN).
+  let pub = null, pubError = null;
+  const pubP = fetchPublicCounts(profile.username, Math.max(60, reelsOnly.length + 10)).then((m) => { pub = m; }).catch((e) => { pubError = e.message; });
+  const reels = await mapLimit(reelsOnly, 6, async (m) => {
     const old = prevById.get(m.id);
-    const fresh = !old || old.views == null || full || new Date(m.timestamp).getTime() > cutoff;
-    const ins = fresh ? await fetchMediaInsights(token, m) : {};
+    const ins = await fetchMediaInsights(token, m);
     const r = normalizeReel(m, ins);
-    if (!fresh && old) return { ...old, likes: m.like_count ?? old.likes, comments: m.comments_count ?? old.comments, caption: r.caption, title: r.title, thumbnail_url: r.thumbnail_url || old.thumbnail_url, media_url: r.media_url || old.media_url };
+    if (r.views_organic == null && old) { r.views = old.views ?? null; r.views_organic = old.views_organic ?? null; r.reach = old.reach ?? null; r.saves = old.saves ?? null; r.shares = old.shares ?? null; }
     return old ? { ...old, ...r } : r;
   });
+  await pubP;
+  for (const r of reels) {
+    const p = pub?.get(shortcode(r.permalink));
+    if (p && p.views != null) {
+      r.views_public = p.views;
+      r.views = Math.max(p.views, r.views_organic || 0);
+      if (p.likes != null) r.likes = Math.max(p.likes, r.likes || 0);
+      if (p.comments != null) r.comments = Math.max(p.comments, r.comments || 0);
+      // Public counter clearly above organic → the reel had paid distribution.
+      r.promoted = r.views_organic != null && p.views > r.views_organic * 1.15 + 20;
+    } else if (r.views_public != null) {
+      r.views = Math.max(r.views_public, r.views_organic || 0);
+    }
+  }
   reels.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
   await setJSON(K.reels, reels);
-  return { profile, reels, count: reels.length, synced_at: new Date().toISOString() };
+  const synced_at = new Date().toISOString();
+  await setJSON(K.syncMeta, { synced_at, public_counts: !!pub, public_error: pubError, count: reels.length });
+  return { profile, reels, count: reels.length, synced_at, publicCounts: !!pub, publicError: pubError };
 }

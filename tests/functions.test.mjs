@@ -46,7 +46,9 @@ test('instagram oauth + sync + reels', async () => {
   assert.equal(d.reels[0].views, 1000); assert.equal(d.reels[0].saves, 20); assert.ok(d.kpis.reachTotal > 0); assert.equal(d.monthly.length, 9);
   const sync = (await import('../netlify/functions/ig-sync.mjs')).default;
   const s = await text(await sync(req('/api/ig/sync', { method: 'POST', cookie })));
-  assert.equal(s.ok, true); assert.equal(s.count, 6);
+  assert.equal(s.started, true); assert.equal(s.inline, true);
+  const st = await text(await sync(req('/api/ig/sync', { cookie })));
+  assert.equal(st.sync.count, 6); assert.ok(st.sync.synced_at); assert.ok(!st.sync.running);
 });
 
 test('analyze: transcript + claude', async () => {

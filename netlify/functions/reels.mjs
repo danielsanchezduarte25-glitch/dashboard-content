@@ -5,8 +5,8 @@ import { getJSON, K } from './_lib/store.mjs';
 // Everything the Dashboard and Instagram views need in one call.
 export default async (req) => {
   const unauth = requireAuth(req); if (unauth) return unauth;
-  const [reels, profile, followers, goals] = await Promise.all([
-    getJSON(K.reels, []), getJSON(K.profile), getJSON(K.followerHistory, []), getJSON(K.goals),
+  const [reels, profile, followers, goals, syncMeta] = await Promise.all([
+    getJSON(K.reels, []), getJSON(K.profile), getJSON(K.followerHistory, []), getJSON(K.goals), getJSON(K.syncMeta),
   ]);
   const list = reels || [];
   const med = median(list.map((r) => r.views).filter(Boolean));
@@ -47,7 +47,7 @@ export default async (req) => {
   };
   return json({
     profile, goals: goals || { followers: 30000, views: 1000000, reelsPerMonth: 16, savesPerReel: 250 },
-    kpis, monthly, median: med,
+    kpis, monthly, median: med, sync: syncMeta || (profile?.synced_at ? { synced_at: profile.synced_at } : null),
     reels: list.map((r) => ({ ...r, er: engagementRate(r), x: med ? (r.views || 0) / med : null, analyzed: analyzed.has(r.id) })),
   });
 };
