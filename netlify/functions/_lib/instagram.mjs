@@ -5,7 +5,8 @@ import { getJSON, setJSON, K } from './store.mjs';
 
 const GRAPH = 'https://graph.instagram.com';
 const VER = env('IG_GRAPH_VERSION', 'v21.0');
-export const SCOPES = ['instagram_business_basic', 'instagram_business_manage_insights'];
+export const SCOPES = ['instagram_business_basic', 'instagram_business_manage_insights', 'instagram_business_content_publish'];
+export const PUBLISH_SCOPE = 'instagram_business_content_publish';
 
 export function authorizeUrl(redirectUri, state) {
   const p = new URLSearchParams({

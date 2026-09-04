@@ -35,6 +35,7 @@
     <button data-view="chat"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>AI Chat</button>
     <button data-view="historias"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M9 6h6M9 9h4"/></svg>Historias</button>
     <button data-view="variantes"><svg viewBox="0 0 24 24"><path d="M4 7h7l3 5-3 5H4M13 7h7M13 17h7M17 12h3"/></svg>Variantes</button>
+    <button data-view="publicar"><svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>Publicar</button>
     <button data-view="calendario"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario</button>
     <button data-view="ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Ajustes</button>
   </nav>
@@ -213,6 +214,19 @@
   <div class="grid variants" id="variantGrid"></div>
 </section>
 
+<!-- PUBLICAR -->
+<section class="view" id="view-publicar">
+  <div class="page-h">
+    <div><h1>Publicar</h1><p class="sub">Subí reels, fotos, carruseles e historias y publicalos ahora o programalos, directo a Instagram por la API oficial de Meta.</p></div>
+    <button class="btn primary" onclick="newPost()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo post</button>
+  </div>
+  <div id="pubGate"></div>
+  <div class="grid pub-grid">
+    <div class="card" id="pubComposer"></div>
+    <div class="card"><div class="page-h" style="margin-bottom:10px"><div class="eyebrow">Cola y publicados</div><div class="tabs sm" id="pubTabs"><button class="active" data-f="all">Todo</button><button data-f="scheduled">Programados</button><button data-f="published">Publicados</button><button data-f="draft">Borradores</button></div></div><div id="pubList"></div></div>
+  </div>
+</section>
+
 <!-- CALENDARIO -->
 <section class="view" id="view-calendario">
   <div class="page-h">
@@ -266,5 +280,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="/app.js"></script>
 <script src="/studio.js"></script>
+<script src="/publish.js"></script>
 </body>
 </html>

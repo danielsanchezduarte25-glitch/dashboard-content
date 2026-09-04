@@ -31,6 +31,27 @@ export async function del(key) {
   try { await store().delete(key); } catch { mem.delete(key); }
 }
 
+// ---- Binary blobs (uploaded media for publishing) ---------------------------
+const isLocal = () => process.env.NETLIFY_DEV || process.env.NODE_ENV === 'test';
+export async function setBlob(key, buffer) {
+  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  try { await store().set(key, new Blob([buf])); }
+  catch (e) { if (isLocal()) return memSet(key, buf); throw e; }
+}
+export async function getBlob(key) { // → Buffer | null
+  try {
+    const ab = await store().get(key, { type: 'arrayBuffer' });
+    return ab ? Buffer.from(ab) : null;
+  } catch (e) {
+    if (isLocal()) return memGet(key, null);
+    throw e;
+  }
+}
+export async function listKeys(prefix) {
+  try { const { blobs } = await store().list({ prefix }); return blobs.map((b) => b.key); }
+  catch (e) { if (isLocal()) return [...mem.keys()].filter((k) => k.startsWith(prefix)); throw e; }
+}
+
 // In-memory fallback for local runs without Blobs.
 const mem = new Map();
 const memGet = (k, f) => (mem.has(k) ? mem.get(k) : f);
@@ -54,4 +75,8 @@ export const K = {
   goals: 'settings/goals',
   brandkit: 'settings/brandkit',
   oauthState: 'ig/oauth-state',
+  publishQueue: 'publish/queue', // [ { id, kind, media:[{id,type,name,size}], caption, scheduledAt, status, ... } ]
+  publishLock: 'publish/lock',
+  mediaMeta: (id) => `media/${id}/meta`,       // { name, type, size, parts, partSize, created }
+  mediaPart: (id, n) => `media/${id}/part-${String(n).padStart(4, '0')}`,
 };

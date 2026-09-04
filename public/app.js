@@ -100,6 +100,7 @@ function go(v) {
   if (v === 'ajustes') renderSettings();
   if (v === 'variantes') window.initVariants?.();
   if (v === 'historias') window.initStories?.();
+  if (v === 'publicar') window.initPublish?.();
 }
 function safeLS(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { return null; } }
 $('#nav').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) go(b.dataset.view); });
@@ -401,17 +402,18 @@ function md(src) {
 /* ================= CALENDARIO ================= */
 let calY = new Date().getFullYear(), calM = new Date().getMonth();
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-async function loadEvents() { try { S.events = (await api('/api/data?key=events')).value || []; } catch (e) { S.events = []; toast(e.message); } renderCal(); }
+async function loadEvents() { try { S.events = (await api('/api/data?key=events')).value || []; } catch (e) { S.events = []; toast(e.message); } await window.loadPublishQuiet?.(); renderCal(); }
 async function saveEvents() { try { await api('/api/data?key=events', { method: 'PUT', body: { value: S.events } }); } catch (e) { toast('No se guardó el calendario: ' + e.message, 4000); } }
 function shiftMonth(n) { calM += n; if (calM < 0) { calM = 11; calY--; } if (calM > 11) { calM = 0; calY++; } renderCal(); }
 function renderCal() {
   const ev = S.events || []; const published = (S.reels?.reels || []).map((r) => ({ id: 'ig-' + r.id, d: r.date, t: r.title, k: 'done', time: r.timestamp ? new Date(r.timestamp).toTimeString().slice(0, 5) : '' }));
-  const all = [...ev, ...published];
+  const queued = window.publishEventsForCalendar?.() || [];
+  const all = [...ev, ...published, ...queued];
   $('#calTitle').textContent = MESES[calM] + ' ' + calY;
   const first = new Date(calY, calM, 1); const start = (first.getDay() + 6) % 7; const days = new Date(calY, calM + 1, 0).getDate(); const prevDays = new Date(calY, calM, 0).getDate(); const tod = today();
   let h = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => `<div class="dow">${d}</div>`).join('');
   const cells = []; for (let i = start - 1; i >= 0; i--) cells.push({ d: prevDays - i, out: true }); for (let d = 1; d <= days; d++) cells.push({ d }); let nx = 1; while (cells.length % 7) cells.push({ d: nx++, out: true });
-  h += cells.map((c) => { const key = c.out ? null : `${calY}-${String(calM + 1).padStart(2, '0')}-${String(c.d).padStart(2, '0')}`; const evs = key ? all.filter((e) => e.d === key).sort((a, b) => (a.time || '').localeCompare(b.time || '')) : []; return `<div class="day ${c.out ? 'out' : ''} ${key === tod ? 'today' : ''}"><div class="d"><span>${c.d}</span>${evs.length > 3 ? `<span>+${evs.length - 3}</span>` : ''}</div>${evs.slice(0, 3).map((e) => `<div class="ev k-${e.k}" title="${esc(e.t)}" onclick="event.stopPropagation();${e.k === 'done' ? `openReel('${e.id.slice(3)}')` : `editEvent('${e.id}')`}">${e.time ? `<span style="color:var(--muted);font-family:var(--mono);font-size:10px">${e.time}</span> ` : ''}${esc(e.t)}</div>`).join('')}${key ? `<button class="add" onclick="quickEvent({date:'${key}'})">+ agendar</button>` : ''}</div>`; }).join('');
+  h += cells.map((c) => { const key = c.out ? null : `${calY}-${String(calM + 1).padStart(2, '0')}-${String(c.d).padStart(2, '0')}`; const evs = key ? all.filter((e) => e.d === key).sort((a, b) => (a.time || '').localeCompare(b.time || '')) : []; return `<div class="day ${c.out ? 'out' : ''} ${key === tod ? 'today' : ''}"><div class="d"><span>${c.d}</span>${evs.length > 3 ? `<span>+${evs.length - 3}</span>` : ''}</div>${evs.slice(0, 3).map((e) => `<div class="ev k-${e.k}" title="${esc(e.t)}" onclick="event.stopPropagation();${e.k === 'done' ? `openReel('${e.id.slice(3)}')` : e.k === 'pub' ? `go('publicar');openPublishItem('${e.pubId}')` : `editEvent('${e.id}')`}">${e.time ? `<span style="color:var(--muted);font-family:var(--mono);font-size:10px">${e.time}</span> ` : ''}${esc(e.t)}</div>`).join('')}${key ? `<button class="add" onclick="quickEvent({date:'${key}'})">+ agendar</button>` : ''}</div>`; }).join('');
   $('#cal').innerHTML = h;
   const in7 = new Date(); in7.setDate(in7.getDate() + 7); const lim = in7.toISOString().slice(0, 10);
   const up = ev.filter((e) => e.d >= tod && e.d <= lim).sort((a, b) => (a.d + a.time).localeCompare(b.d + b.time));

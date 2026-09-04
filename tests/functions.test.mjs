@@ -93,3 +93,36 @@ test('data store whitelist + size', async () => {
   await data(req('/api/data?key=goals', { method: 'PUT', cookie, body: { value: { followers: 1 } } }));
   assert.equal((await text(await data(req('/api/data?key=goals', { cookie })))).value.followers, 1);
 });
+
+test('publish: chunked upload, media serving, queue and publishing', async () => {
+  const up = (await import('../netlify/functions/media-upload.mjs')).default;
+  const serve = (await import('../netlify/functions/media-serve.mjs')).default;
+  const pub = (await import('../netlify/functions/publish.mjs')).default;
+  const bin = (path, body) => new Request('https://dc.test' + path, { method: 'POST', headers: { cookie, 'content-type': 'application/octet-stream' }, body });
+  const a = Buffer.alloc(10, 1), b = Buffer.alloc(5, 2);
+  let r = await text(await up(bin('/api/media/upload?id=m-test0001&part=0&parts=2&name=v.mp4&type=video/mp4&size=15', a)));
+  assert.equal(r.complete, false);
+  assert.equal((await serve(new Request('https://dc.test/media/m-test0001.mp4'))).status, 404);
+  r = await text(await up(bin('/api/media/upload?id=m-test0001&part=1&parts=2&name=v.mp4&type=video/mp4&size=15', b)));
+  assert.equal(r.complete, true);
+  const full = await serve(new Request('https://dc.test/media/m-test0001.mp4'));
+  assert.equal(full.status, 200); assert.equal(full.headers.get('content-length'), '15');
+  assert.deepEqual([...Buffer.from(await full.arrayBuffer())], [...a, ...b]);
+  const part = await serve(new Request('https://dc.test/media/m-test0001.mp4', { headers: { range: 'bytes=8-11' } }));
+  assert.equal(part.status, 206); assert.deepEqual([...Buffer.from(await part.arrayBuffer())], [1, 1, 2, 2]);
+  const bad = await up(bin('/api/media/upload?id=m-test0002&part=0&parts=1&name=x.png&type=image/png&size=3', b));
+  assert.equal(bad.status, 415);
+  // save as draft, then publish now (inline in tests)
+  const item = { id: 'p-test0001', kind: 'reel', media: [{ id: 'm-test0001', type: 'video/mp4', name: 'v.mp4', size: 15 }], caption: 'Hola', shareToFeed: true };
+  let s = await text(await pub(req('/api/publish', { method: 'POST', cookie, body: { action: 'save', item } })));
+  assert.equal(s.queue[0].status, 'draft');
+  s = await text(await pub(req('/api/publish', { method: 'POST', cookie, body: { action: 'now', id: 'p-test0001' } })));
+  const done = s.queue.find((x) => x.id === 'p-test0001');
+  assert.equal(done.status, 'published'); assert.equal(done.permalink, 'https://www.instagram.com/reel/NEW1/');
+  const c = globalThis.__containers.at(-1);
+  assert.equal(c.media_type, 'REELS'); assert.equal(c.video_url, 'https://dc.test/media/m-test0001.mp4'); assert.equal(c.caption, 'Hola');
+  // delete removes media
+  s = await text(await pub(req('/api/publish?id=p-test0001', { method: 'DELETE', cookie })));
+  assert.equal(s.queue.length, 0);
+  assert.equal((await serve(new Request('https://dc.test/media/m-test0001.mp4'))).status, 404);
+});

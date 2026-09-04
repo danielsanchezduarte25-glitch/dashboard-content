@@ -22,7 +22,7 @@ export default async (req) => {
   return json({
     authed: true,
     config: cfg,
-    instagram: token ? { connected: true, user_id: token.user_id, obtained_at: token.obtained_at, expires_in: token.expires_in } : { connected: false },
+    instagram: token ? { connected: true, user_id: token.user_id, obtained_at: token.obtained_at, expires_in: token.expires_in, permissions: token.permissions ? String(token.permissions).split(',') : null, canPublish: !token.permissions || String(token.permissions).includes('instagram_business_content_publish') } : { connected: false },
     profile: profile || null,
     brandkit: { ...DEFAULT_BRANDKIT, ...(brandkit || {}) },
     goals: goals || { followers: 30000, views: 1000000, reelsPerMonth: 16, savesPerReel: 250 },

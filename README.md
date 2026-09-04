@@ -10,13 +10,14 @@ Panel privado para creadores de Instagram: métricas reales de tus reels (API of
 
 | Módulo | Qué hace | Datos |
 |---|---|---|
-| Dashboard | KPIs (seguidores, reach, guardados, ER, reels, mediana, compartidos, mejor horario), reach mes a mes, objetivos, últimos reels | Instagram Graph API |
+| Dashboard | KPIs (seguidores, reach, guardados, ER, reels, mediana, compartidos, mejor horario), reach mes a mes, objetivos, últimos reels. Vistas = las que muestra Instagram (incluyen promociones); sync automático diario | Instagram Graph API + Apify |
 | Instagram | Grilla de reels con filtros y buscador; panel con métricas privadas, transcripción y análisis IA descargable | Meta + Supadata + Anthropic |
 | Inspiración | Referentes, escaneo (Apify) o carga por URL (Supadata), score viral vs. mediana de la cuenta, "Adaptar a mi marca" | Supadata/Apify + Anthropic |
 | AI Chat | Conversaciones persistentes con un estratega que conoce tu kit de marca, tus reels y sus análisis | Anthropic |
 | Historias | Secuencias de slides, capas de texto arrastrables, dibujo, fondos (PC / URL / Drive), export ZIP de PNG 1080×1920 | Canvas + JSZip |
 | Variantes | 5–10 re-ediciones (velocidad, zoom, contraste, saturación, temperatura, recorte, texto) con `ffmpeg.wasm` | local |
-| Calendario | Reels publicados + agenda de reels/stories/pruebas, próximos 7 días | Netlify Blobs |
+| Publicar | Subí reels, fotos, carruseles e historias; caption con IA; publicá ahora o programá (cola cada 5 min) | Instagram Content Publishing API + Netlify Blobs |
+| Calendario | Reels publicados + posts programados + agenda de reels/stories/pruebas, próximos 7 días | Netlify Blobs |
 | Ajustes | Conexiones, objetivos y kit de marca | Netlify Blobs |
 
 ## Stack

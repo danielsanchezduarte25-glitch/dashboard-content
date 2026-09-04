@@ -295,6 +295,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .ev.k-reel{border-left-color:var(--accent)}
 .ev.k-story{border-left-color:var(--warn)}
 .ev.k-test{border-left-color:var(--info)}
+.ev.k-pub{border-left-color:var(--good)}
 .ev.done{opacity:.55;text-decoration:line-through}
 .day .add{margin-top:auto;background:none;border:0;color:var(--faint);font-size:11px;text-align:left;padding:2px 0;opacity:0}
 .day:hover .add{opacity:1}
@@ -355,3 +356,34 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .linkish{color:var(--info);text-decoration:underline;cursor:pointer}
 .small{font-size:12px;color:var(--muted)}
 .reel .badge.promo{right:auto;left:10px;background:#f5b400;color:#1a1200}
+
+/* Publicar */
+.pub-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
+@media (max-width:1100px){.pub-grid{grid-template-columns:1fr}}
+.dropzone{border:1.5px dashed var(--line2);border-radius:12px;padding:10px;cursor:pointer;transition:border-color .15s,background .15s;background:var(--panel2)}
+.dropzone.over{border-color:var(--accent);background:var(--accent-dim)}
+.dropzone.locked{cursor:default;opacity:.85}
+.pub-media{display:flex;gap:10px;flex-wrap:wrap}
+.pm{position:relative;width:118px}
+.pm video,.pm img{width:118px;height:190px;object-fit:cover;border-radius:9px;background:#000;display:block}
+.pm-name{font-size:10px;color:var(--muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm-bar{height:4px;background:var(--panel3);border-radius:2px;margin-top:4px;overflow:hidden}.pm-bar i{display:block;height:100%;background:var(--accent);transition:width .2s}
+.pm-x{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6)}
+.pub-field{display:flex;flex-direction:column;gap:6px}
+.pub-field .eyebrow{display:flex;justify-content:space-between}
+.pub-field textarea,#pubBrief,.pub-when input,.pub-when select,.pub-opts input{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:0;width:100%;color:var(--ink)}
+.pub-field textarea{resize:vertical;min-height:120px;line-height:1.5}
+.pub-opts{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--ink2)}
+.chk{display:inline-flex;align-items:center;gap:8px}.chk input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
+.pub-when{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:12px}
+.pub-when label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+.pub-when label[hidden]{display:none}
+.pub-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-wrap:wrap}
+.pub-row{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer;background:var(--panel2)}
+.pub-row.sel{border-color:var(--accent)}
+.pub-row .th{width:44px;height:70px;border-radius:7px;overflow:hidden;flex:none}.pub-row .th img,.pub-row .th video{width:100%;height:100%;object-fit:cover;display:block}
+.pub-info{flex:1;min-width:0}.pub-title{font-weight:500;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pub-row .acts{display:flex;gap:4px}
+.tabs.sm .tab,.tabs.sm button{padding:4px 10px;font-size:12px}
+#pubTabs button{background:none;border:0;border-radius:7px;color:var(--muted)}#pubTabs button.active{background:var(--panel3);color:var(--ink)}
+.setup{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}

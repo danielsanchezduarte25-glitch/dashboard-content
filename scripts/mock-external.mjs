@@ -7,6 +7,10 @@ globalThis.fetch = async (url, init) => {
   if (u.startsWith('https://api.instagram.com/oauth/access_token')) return j({ access_token: 'short', user_id: 123, permissions: 'x' });
   if (u.includes('graph.instagram.com/access_token')) return j({ access_token: 'long', token_type: 'bearer', expires_in: 5184000 });
   if (u.includes('/me?fields')) return j({ user_id: '123', username: 'soydanielsanchez_', name: 'Dani Sánchez', followers_count: 2480, media_count: 47 });
+  if (u.includes('/me/media_publish')) return j({ id: 'pub1' });
+  if (u.includes('/me/media') && init?.method === 'POST') { const p = new URLSearchParams(String(init.body)); globalThis.__containers = (globalThis.__containers || []).concat([Object.fromEntries(p)]); return j({ id: 'c' + globalThis.__containers.length }); }
+  if (/\/c\d+\?fields=status_code/.test(u)) return j({ status_code: 'FINISHED' });
+  if (/\/pub1\?fields=permalink/.test(u)) return j({ permalink: 'https://www.instagram.com/reel/NEW1/' });
   if (u.includes('/me/media')) return j({ data: media, paging: {} });
   if (/\/m\d+\/insights/.test(u)) { const i = +u.match(/\/m(\d+)\//)[1]; return j({ data: [{ name: 'views', values: [{ value: 1000 * (i + 1) }] }, { name: 'reach', values: [{ value: 800 * (i + 1) }] }, { name: 'saved', values: [{ value: 20 * (i + 1) }] }, { name: 'shares', values: [{ value: 5 }] }, { name: 'likes', values: [{ value: 10 * (i + 1) }] }, { name: 'comments', values: [{ value: i }] }] }); }
   if (u.startsWith('https://api.supadata.ai/v1/transcript')) return j({ content: 'Hola, este es el texto del reel. Comentá IA y te lo mando.', lang: 'es' });
