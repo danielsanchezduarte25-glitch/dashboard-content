@@ -77,6 +77,7 @@ export const K = {
   oauthState: 'ig/oauth-state',
   publishQueue: 'publish/queue', // [ { id, kind, media:[{id,type,name,size}], caption, scheduledAt, status, ... } ]
   publishLock: 'publish/lock',
+  job: (id) => `jobs/${id}`,                 // { id, kind, status, result|error }
   mediaMeta: (id) => `media/${id}/meta`,       // { name, type, size, parts, partSize, created }
   mediaPart: (id, n) => `media/${id}/part-${String(n).padStart(4, '0')}`,
 };

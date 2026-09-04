@@ -1,4 +1,5 @@
-import { json, error, readJSON, engagementRate, streamJSON } from './_lib/http.mjs';
+import { json, error, readJSON, engagementRate } from './_lib/http.mjs';
+import { handlers, runAsJob } from './_lib/jobs.mjs';
 import { requireAuth } from './_lib/auth.mjs';
 import { getJSON, setJSON, K } from './_lib/store.mjs';
 import { claude, extractJSON, transcribeUrl, buildContext, systemPrompt } from './_lib/ai.mjs';
@@ -16,8 +17,9 @@ export default async (req) => {
   }
   if (req.method !== 'POST') return error('Método no permitido', 405);
   const body = await readJSON(req);
-  return streamJSON(() => runAnalyze(body));
+  return runAsJob(req, 'analyze', body);
 };
+handlers.analyze = (body) => runAnalyze(body);
 
 async function runAnalyze(body) {
   const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };

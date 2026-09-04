@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { json, error, readJSON, env, median, mapLimit, streamJSON } from './_lib/http.mjs';
+import { json, error, readJSON, env, median, mapLimit } from './_lib/http.mjs';
+import { handlers, runAsJob } from './_lib/jobs.mjs';
 import { requireAuth } from './_lib/auth.mjs';
 import { getJSON, setJSON, K } from './_lib/store.mjs';
 import { claude, mediaMetadata, transcribeUrl, buildContext, systemPrompt } from './_lib/ai.mjs';
@@ -28,8 +29,10 @@ export default async (req) => {
     return state();
   }
   const body = await readJSON(req);
-  return streamJSON(() => handle(body));
+  if (body.action === 'refs') return json(await handle(body));
+  return runAsJob(req, 'bangers', body);
 };
+handlers.bangers = (body) => handle(body);
 
 async function fullState() {
   return { refs: (await getJSON(K.refs, [])) || [], bangers: (await getJSON(K.bangers, [])) || [], scanlog: (await getJSON(K.scanLog, [])) || [], providers: { apify: !!env('APIFY_TOKEN'), supadata: !!env('SUPADATA_API_KEY') } };

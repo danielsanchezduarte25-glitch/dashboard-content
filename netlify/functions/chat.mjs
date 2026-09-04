@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { json, error, readJSON, streamJSON } from './_lib/http.mjs';
+import { json, error, readJSON } from './_lib/http.mjs';
+import { handlers, runAsJob } from './_lib/jobs.mjs';
 import { requireAuth } from './_lib/auth.mjs';
 import { getJSON, setJSON, K } from './_lib/store.mjs';
 import { claude, buildContext, systemPrompt } from './_lib/ai.mjs';
@@ -19,8 +20,9 @@ export default async (req) => {
   if (req.method !== 'POST') return error('Método no permitido', 405);
   const { convId, message } = await readJSON(req);
   if (!message?.trim()) return error('Mensaje vacío');
-  return streamJSON(() => runChat(convs, convId, message));
+  return runAsJob(req, 'chat', { convId, message });
 };
+handlers.chat = async ({ convId, message }) => runChat((await getJSON(K.chats, [])) || [], convId, message);
 
 async function runChat(convs, convId, message) {
   let conv = convs.find((c) => c.id === convId);

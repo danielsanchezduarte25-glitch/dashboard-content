@@ -34,8 +34,23 @@ async function api(path, { method = 'GET', body, timeoutMs = 90000 } = {}) {
   const text = (await res.text()).trim();
   let data = {}; try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text.slice(0, 200) || `HTTP ${res.status}` }; }
   if (res.status === 401 && !path.startsWith('/api/login')) { showLogin(); throw new Error('Sesión vencida. Entrá de nuevo.'); }
+  if (res.ok && !text && method !== 'GET') throw new Error('El servidor cortó la respuesta (tardó demasiado). Probá de nuevo.');
   if (!res.ok || data.error) throw Object.assign(new Error(data.error || `HTTP ${res.status}`), { status: data.status || res.status });
+  if (data.__job) return waitJob(data.__job, timeoutMs);
   return data;
+}
+// Long tasks run in the background on the server; poll until they finish.
+async function waitJob(id, timeoutMs = 180000) {
+  const t0 = Date.now(); let wait = 1500;
+  while (Date.now() - t0 < timeoutMs) {
+    await new Promise((r) => setTimeout(r, wait)); wait = Math.min(wait + 500, 4000);
+    const res = await fetch('/api/jobs?id=' + id, { credentials: 'same-origin' });
+    if (res.status === 401) { showLogin(); throw new Error('Sesión vencida. Entrá de nuevo.'); }
+    const j = await res.json().catch(() => ({}));
+    if (j.status === 'done') return j.result;
+    if (j.status === 'error' || j.error) throw Object.assign(new Error(j.error || 'La tarea falló'), { status: j.errorStatus || 500 });
+  }
+  throw new Error('La tarea sigue en curso pero tardó demasiado; volvé a intentar en un momento.');
 }
 
 /* ================= STATE ================= */
@@ -167,7 +182,7 @@ function renderDashboard() {
     { l: 'Reach total', v: fmt(k.reachTotal), d: delta(k.reachDelta), c: cls(k.reachDelta), ic: svgI.eye },
     { l: 'Total guardados', v: fmt(k.savesTotal), d: delta(k.savesDelta), c: cls(k.savesDelta), ic: svgI.save },
     { l: 'Engagement rate', v: k.er.toFixed(1) + '%', d: '<span class="vs">promedio por reel</span>', c: 'up', ic: '<svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>' },
-    { l: 'Reels publicados', v: k.reelsPublished, d: `${k.reelsThisMonth} este mes · ${delta(k.reelsDelta, '%')}`, c: cls(k.reelsDelta), ic: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>' },
+    { l: 'Reels publicados', v: k.reelsPublished, d: `${k.reelsThisMonth} este mes · ${d.reels.filter((r) => r.promoted).length} pautados`, c: cls(k.reelsDelta), ic: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>' },
     { l: 'Mediana de vistas', v: fmt(k.medianViews), d: '<span class="vs">referencia para el ×</span>', c: 'up', ic: '<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>' },
     { l: 'Compartidos', v: fmt(k.sharesTotal), d: delta(k.sharesDelta), c: cls(k.sharesDelta), ic: '<svg viewBox="0 0 24 24"><path d="M4 12v8h16v-8M12 3v13M8 7l4-4 4 4"/></svg>' },
     { l: 'Mejor horario', v: k.bestHour || '—', d: '<span class="vs">hora local con más reach</span>', c: 'up', ic: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' },
@@ -187,7 +202,7 @@ function renderDashboard() {
     <div class="card"><div class="eyebrow">Objetivos del mes</div><h2 style="margin-top:4px">${new Date().toLocaleString('es', { month: 'long' }).replace(/^./, (c) => c.toUpperCase())}</h2>${gl.map((g) => `<div class="goal"><div class="lbl"><span>${g.l}</span><span>${fmt(g.a)} / ${fmt(g.b)}</span></div><div class="bar"><i style="width:${Math.min(100, g.b ? g.a / g.b * 100 : 0).toFixed(1)}%"></i></div><small>${pct(g.a, g.b)} del objetivo · ${g.n}</small></div>`).join('')}<div style="margin-top:12px"><button class="btn sm ghost" onclick="go('ajustes')">Editar objetivos →</button></div></div>
   </div>
   <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div><div class="eyebrow">Últimos reels</div><h2 style="margin-top:4px">Rendimiento reciente</h2></div><button class="btn sm ghost" onclick="go('instagram')">Ver todos →</button></div>
-  <div style="overflow-x:auto"><table><thead><tr><th>Reel</th><th>Fecha</th><th class="num">Vistas</th><th class="num">Reach</th><th class="num">Guardados</th><th class="num">ER</th><th class="num">vs mediana</th><th>IA</th></tr></thead><tbody>${rec.map((r) => `<tr style="cursor:pointer" onclick="openReel('${r.id}')"><td><div class="mini"><div class="th" style="background:${gradFor(r.id)}">${r.thumbnail_url ? `<img src="${esc(r.thumbnail_url)}" alt="" loading="lazy" style="border-radius:5px">` : ''}</div><span style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">${esc(r.title)}</span></div></td><td style="color:var(--muted)">${fdate(r.date)}</td><td class="num">${fmt(r.views)}</td><td class="num">${fmt(r.reach)}</td><td class="num">${fmt(r.saves)}</td><td class="num">${r.er.toFixed(2)}%</td><td class="num"><span class="pill ${r.x >= 1 ? 'good' : 'bad'}">${xfmt(r.x)}</span></td><td>${r.analyzed ? '<span class="pill good">✓</span>' : '<span class="pill">—</span>'}</td></tr>`).join('')}</tbody></table></div></div>`;
+  <div style="overflow-x:auto"><table><thead><tr><th>Reel</th><th>Fecha</th><th class="num">Vistas</th><th class="num">Reach</th><th class="num">Guardados</th><th class="num">ER</th><th class="num">vs mediana</th><th>Tipo</th><th>IA</th></tr></thead><tbody>${rec.map((r) => `<tr style="cursor:pointer" onclick="openReel('${r.id}')"><td><div class="mini"><div class="th" style="background:${gradFor(r.id)}">${r.thumbnail_url ? `<img src="${esc(r.thumbnail_url)}" alt="" loading="lazy" style="border-radius:5px">` : ''}</div><span style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">${esc(r.title)}</span></div></td><td style="color:var(--muted)">${fdate(r.date)}</td><td class="num">${fmt(r.views)}</td><td class="num">${fmt(r.reach)}</td><td class="num">${fmt(r.saves)}</td><td class="num">${r.er.toFixed(2)}%</td><td class="num"><span class="pill ${r.x >= 1 ? 'good' : 'bad'}">${xfmt(r.x)}</span></td><td>${r.promoted ? '<span class="pill warn">Pautado</span>' : '<span class="pill good">Orgánico</span>'}</td><td>${r.analyzed ? '<span class="pill good">✓</span>' : '<span class="pill">—</span>'}</td></tr>`).join('')}</tbody></table></div></div>`;
   renderChart(d.monthly);
 }
 
@@ -219,7 +234,7 @@ function niceStep(x) { const p = Math.pow(10, Math.floor(Math.log10(x || 1))); c
 let reelFilter = 'all', reelQuery = '';
 function reelCard(r) {
   const cls = r.er >= 3 ? 'hi' : r.er < 1 ? 'lo' : '';
-  return `<button class="reel" onclick="openReel('${r.id}')" aria-label="${esc(r.title)}"><div class="bgp" style="background:${gradFor(r.id)}">${r.thumbnail_url ? `<img src="${esc(r.thumbnail_url)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>${r.analyzed ? '<span class="badge">IA</span>' : ''}${r.promoted ? '<span class="badge promo" title="Este reel tuvo promoción pagada: las vistas incluyen anuncios">Promo</span>' : ''}<div class="caption">${esc(r.title)}</div><div class="meta"><span><b>${fmt(r.views)}</b> vistas</span><span class="er ${cls}">${r.er.toFixed(2)}% ER</span></div></button>`;
+  return `<button class="reel" onclick="openReel('${r.id}')" aria-label="${esc(r.title)}"><div class="bgp" style="background:${gradFor(r.id)}">${r.thumbnail_url ? `<img src="${esc(r.thumbnail_url)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>${r.analyzed ? '<span class="badge">IA</span>' : ''}${r.promoted ? '<span class="badge promo" title="Este reel tuvo promoción pagada: las vistas incluyen anuncios">Pautado</span>' : ''}<div class="caption">${esc(r.title)}</div><div class="meta"><span><b>${fmt(r.views)}</b> vistas</span><span class="er ${cls}">${r.er.toFixed(2)}% ER</span></div></button>`;
 }
 function renderReels() {
   const d = S.reels; if (!d) return;
@@ -229,6 +244,8 @@ function renderReels() {
   if (reelFilter === 'views') list.sort((a, b) => (b.views || 0) - (a.views || 0));
   if (reelFilter === 'er') list.sort((a, b) => b.er - a.er);
   if (reelFilter === 'analyzed') list = list.filter((r) => r.analyzed);
+  if (reelFilter === 'paid') list = list.filter((r) => r.promoted);
+  if (reelFilter === 'organic') list = list.filter((r) => !r.promoted);
   $('#reelCount').textContent = d.reels.length;
   $('#reelGrid').innerHTML = list.length ? list.map(reelCard).join('') : (d.reels.length ? '<p class="sub">Ningún reel coincide.</p>' : empty('Sin reels', 'Conectá Instagram y sincronizá para ver tus reels acá.', `<button class="btn primary" onclick="syncReels()">Sincronizar</button>`));
 }
@@ -244,7 +261,7 @@ async function overrideViews(id) {
 async function openReel(id) {
   const r = S.reels?.reels.find((x) => x.id === id); if (!r) return;
   $('#drawer').innerHTML = `<button class="iconbtn close" onclick="closeDrawer()">${svgI.x}</button>
-  <div class="dhead"><div class="th" style="background:${gradFor(r.id)}">${r.thumbnail_url ? `<img src="${esc(r.thumbnail_url)}" alt="" style="border-radius:8px">` : ''}</div><div><h3>${esc(r.title)}</h3><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill">${fdate(r.date)}</span><span class="pill ${r.x >= 1 ? 'good' : 'bad'}">${xfmt(r.x)} tu mediana de vistas</span></div></div></div>
+  <div class="dhead"><div class="th" style="background:${gradFor(r.id)}">${r.thumbnail_url ? `<img src="${esc(r.thumbnail_url)}" alt="" style="border-radius:8px">` : ''}</div><div><h3>${esc(r.title)}</h3><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill">${fdate(r.date)}</span><span class="pill ${r.x >= 1 ? 'good' : 'bad'}">${xfmt(r.x)} tu mediana de vistas</span>${r.promoted ? `<span class="pill warn" title="Vistas públicas muy por encima de las orgánicas de la API: hubo promoción pagada. Aprox. ${(Math.max(0, (r.views || 0) - (r.views_organic || 0))).toLocaleString('es')} vistas pagadas (público − orgánico).">💰 Pautado</span>` : (r.views_organic != null ? '<span class="pill good" title="Las vistas públicas coinciden con las orgánicas de la API de Meta">🌱 100% orgánico</span>' : '')}</div></div></div>
   <div class="stat3"><div class="stat"><div class="eyebrow">Views${r.promoted ? ' · promo' : ''}</div><div class="v">${r.views == null ? 'N/A' : r.views.toLocaleString('es')}</div>${r.views_organic != null && r.views_organic !== r.views ? `<div class="small" title="Lo que reporta la API de Meta sin anuncios">orgánicas ${r.views_organic.toLocaleString('es')}</div>` : ''}<button class="btn sm ghost" style="margin-top:6px;padding:2px 8px;font-size:11px" title="Si Instagram muestra otro número (p. ej. por promoción pagada), escribilo acá" onclick="overrideViews('${r.id}')">${r.views_manual != null ? 'Editar' : 'Corregir'}</button></div><div class="stat"><div class="eyebrow">Likes</div><div class="v">${r.likes ?? 0}</div></div><div class="stat"><div class="eyebrow">Comments</div><div class="v">${r.comments ?? 0}</div></div></div>
   <div class="eyebrow" style="margin-bottom:8px">Métricas privadas (Meta API oficial${r.promoted ? ' · solo orgánico, sin anuncios' : ''})</div>
   <div class="stat4"><div class="stat"><div class="eyebrow">Reach</div><div class="v">${r.reach == null ? 'N/A' : r.reach.toLocaleString('es')}</div></div><div class="stat"><div class="eyebrow">Saves</div><div class="v">${r.saves ?? 'N/A'}</div></div><div class="stat"><div class="eyebrow">Shares</div><div class="v">${r.shares ?? 'N/A'}</div></div><div class="stat"><div class="eyebrow">ER %</div><div class="v">${r.er.toFixed(2)}%</div></div></div>
