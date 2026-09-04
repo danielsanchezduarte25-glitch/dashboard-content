@@ -17,6 +17,7 @@ Panel privado para creadores de Instagram: métricas reales de tus reels (API of
 | Historias | Secuencias de slides, capas de texto arrastrables, dibujo, fondos (PC / URL / Drive), export ZIP de PNG 1080×1920 | Canvas + JSZip |
 | Variantes | 5–10 re-ediciones (velocidad, zoom, contraste, saturación, temperatura, recorte, texto) con `ffmpeg.wasm` | local |
 | Publicar | Subí reels, fotos, carruseles e historias; caption con IA; publicá ahora o programá (cola cada 5 min) | Instagram Content Publishing API + Netlify Blobs |
+| Ventas | Productos con stock, registro de ventas con origen (anuncio específico / orgánico / referido), mini dashboard de ingresos por día y por fuente, exportar CSV | Netlify Blobs |
 | Calendario | Reels publicados + posts programados + agenda de reels/stories/pruebas, próximos 7 días | Netlify Blobs |
 | Ajustes | Conexiones, objetivos y kit de marca | Netlify Blobs |
 

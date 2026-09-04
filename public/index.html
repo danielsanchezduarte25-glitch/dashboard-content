@@ -36,6 +36,7 @@
     <button data-view="historias"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M9 6h6M9 9h4"/></svg>Historias</button>
     <button data-view="variantes"><svg viewBox="0 0 24 24"><path d="M4 7h7l3 5-3 5H4M13 7h7M13 17h7M17 12h3"/></svg>Variantes</button>
     <button data-view="publicar"><svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>Publicar</button>
+    <button data-view="ventas"><svg viewBox="0 0 24 24"><path d="M3 3h2l2.5 12h11L21 7H6.5"/><circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg>Ventas</button>
     <button data-view="calendario"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario</button>
     <button data-view="ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Ajustes</button>
   </nav>
@@ -229,6 +230,25 @@
   </div>
 </section>
 
+<!-- VENTAS -->
+<section class="view" id="view-ventas">
+  <div class="page-h">
+    <div><h1>Ventas</h1><p class="sub">Stock de tus productos, registro de cada venta y de dónde vino: anuncio (cuál) u orgánico.</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="salesProductForm()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Producto</button><button class="btn" onclick="salesAdForm()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Anuncio</button><button class="btn primary" onclick="salesSaleForm()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Registrar venta</button></div>
+  </div>
+  <div class="tabs" id="salesRange" style="margin-bottom:14px"><button class="tab active" data-r="30">Últimos 30 días</button><button class="tab" data-r="7">7 días</button><button class="tab" data-r="90">90 días</button><button class="tab" data-r="all">Todo</button></div>
+  <div id="salesKpis" class="grid kpis" style="grid-template-columns:repeat(5,1fr)"></div>
+  <div class="grid sales-grid">
+    <div class="card"><div class="page-h" style="margin-bottom:8px"><div class="eyebrow">Ingresos por día</div><span class="small" id="salesChartNote"></span></div><div id="salesChart" class="sbars"></div></div>
+    <div class="card"><div class="eyebrow" style="margin-bottom:10px">Origen de las ventas</div><div id="salesSources"></div></div>
+  </div>
+  <div class="grid sales-grid">
+    <div class="card"><div class="eyebrow" style="margin-bottom:10px">Productos y stock</div><div id="salesProducts"></div></div>
+    <div class="card"><div class="eyebrow" style="margin-bottom:10px">Anuncios</div><div id="salesAds"></div></div>
+  </div>
+  <div class="card"><div class="page-h" style="margin-bottom:8px"><div class="eyebrow">Ventas registradas</div><button class="btn sm ghost" onclick="salesExport()">⇩ Exportar CSV</button></div><div id="salesList"></div></div>
+</section>
+
 <!-- CALENDARIO -->
 <section class="view" id="view-calendario">
   <div class="page-h">
@@ -283,5 +303,6 @@
 <script src="/app.js"></script>
 <script src="/studio.js"></script>
 <script src="/publish.js"></script>
+<script src="/sales.js"></script>
 </body>
 </html>

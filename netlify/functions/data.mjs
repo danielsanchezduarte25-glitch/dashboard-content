@@ -4,7 +4,7 @@ import { getJSON, setJSON, K } from './_lib/store.mjs';
 
 // Generic key/value for the client-side modules (stories, calendar, goals, brand kit).
 // GET /api/data?key=events   PUT /api/data?key=events  { value }
-const ALLOWED = { sequences: K.sequences, events: K.events, goals: K.goals, brandkit: K.brandkit };
+const ALLOWED = { sequences: K.sequences, events: K.events, goals: K.goals, brandkit: K.brandkit, products: 'sales/products', sales: 'sales/items', ads: 'sales/ads' };
 const LIMIT = 900 * 1024; // keep each blob under ~1 MB
 
 export default async (req) => {
