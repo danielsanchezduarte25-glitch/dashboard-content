@@ -17,6 +17,12 @@ button{cursor:pointer}
 a{color:inherit}
 ::selection{background:var(--accent-dim)}
 .app{display:grid;grid-template-columns:224px 1fr;min-height:100vh}
+.main{position:relative}
+.corner-logo{position:absolute;top:22px;right:24px;z-index:40;display:block;width:56px;height:56px;border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(120,80,255,.35);transition:transform .15s}
+.corner-logo:hover{transform:scale(1.05)}
+.corner-logo img{width:100%;height:100%;display:block}
+.logo-img{width:38px;height:38px;border-radius:10px;display:block;box-shadow:0 4px 14px rgba(120,80,255,.35)}
+@media (max-width:900px){.corner-logo{width:42px;height:42px;top:12px;right:12px}}
 /* Sidebar */
 .side{background:var(--panel);border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh}
 .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px}
@@ -37,6 +43,7 @@ a{color:inherit}
 .logout:hover{color:var(--ink);background:var(--panel2)}
 /* Main */
 .main{padding:28px 32px 48px;max-width:1240px;width:100%}
+.main .page-h:first-of-type,.main>.view.active>.page-h:first-child{padding-right:72px}
 .view{display:none}.view.active{display:block}
 .page-h{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px}
 h1{font-family:var(--display);font-weight:600;font-size:22px;margin:0 0 4px;letter-spacing:-.01em;text-wrap:balance}

@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Dashboard Content</title>
+<title>CODA Dashboard</title>
+<link rel="icon" type="image/png" href="/favicon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ff4d8d'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='41' font-family='sans-serif' font-weight='700' font-size='24' fill='white' text-anchor='middle'%3EDC%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
@@ -15,7 +16,7 @@
 <!-- ================= LOGIN ================= -->
 <div class="login" id="login">
   <form class="box" id="loginForm">
-    <div class="brand"><div class="logo">DC</div><div><b>Dashboard</b><span>Content</span></div></div>
+    <div class="brand"><img class="logo-img" src="/coda-logo.png" alt="CODA"><div><b>CODA</b><span>Dashboard</span></div></div>
     <h1 style="font-size:18px">Entrar</h1>
     <p class="sub" style="font-size:13px">Este panel es privado. Ingresá la contraseña que configuraste en Netlify (<code style="font-family:var(--mono);font-size:12px">APP_PASSWORD</code>).</p>
     <input type="password" id="pw" placeholder="Contraseña" autocomplete="current-password" autofocus>
@@ -27,7 +28,7 @@
 <!-- ================= APP ================= -->
 <div class="app hidden" id="app">
 <aside class="side">
-  <div class="brand"><div class="logo">DC</div><div><b>Dashboard</b><span>Content</span></div></div>
+  <div class="brand"><img class="logo-img" src="/coda-logo.png" alt="CODA"><div><b>CODA</b><span>Dashboard</span></div></div>
   <nav class="nav" id="nav">
     <button data-view="dashboard" class="active"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
     <button data-view="instagram"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor"/></svg>Instagram</button>
@@ -46,6 +47,7 @@
 </aside>
 
 <main class="main">
+<a class="corner-logo" href="#" onclick="go('dashboard');return false" title="CODA Dashboard — Contenido orgánico"><img src="/coda-logo.png" alt="CODA Dashboard"></a>
 <div class="setup" id="setup"></div>
 
 <!-- DASHBOARD -->
