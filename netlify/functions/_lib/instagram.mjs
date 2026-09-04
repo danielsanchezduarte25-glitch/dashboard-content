@@ -187,6 +187,7 @@ export async function syncAll(token, { full = false } = {}) {
     } else if (r.views_public != null) {
       r.views = Math.max(r.views_public, r.views_organic || 0);
     }
+    if (r.views_manual != null) r.views = Math.max(r.views_manual, r.views || 0);
   }
   reels.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
   await setJSON(K.reels, reels);

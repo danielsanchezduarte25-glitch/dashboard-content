@@ -235,11 +235,17 @@ function renderReels() {
 $('#reelTabs').addEventListener('click', (e) => { const b = e.target.closest('.tab'); if (!b) return; $$('#reelTabs .tab').forEach((t) => t.classList.remove('active')); b.classList.add('active'); reelFilter = b.dataset.f; renderReels(); });
 $('#reelSearch').addEventListener('input', (e) => { reelQuery = e.target.value; renderReels(); });
 
+async function overrideViews(id) {
+  const r = S.reels?.reels.find((x) => x.id === id); if (!r) return;
+  const v = prompt('Vistas según la app de Instagram (dejá vacío para volver al automático):', r.views_manual ?? r.views ?? '');
+  if (v === null) return;
+  try { await api('/api/reels/override', { method: 'POST', body: { id, views: v.trim() === '' ? null : Number(v.replace(/[^\d]/g, '')) } }); await loadReels(); openReel(id); toast('Vistas actualizadas'); } catch (e) { toast(e.message); }
+}
 async function openReel(id) {
   const r = S.reels?.reels.find((x) => x.id === id); if (!r) return;
   $('#drawer').innerHTML = `<button class="iconbtn close" onclick="closeDrawer()">${svgI.x}</button>
   <div class="dhead"><div class="th" style="background:${gradFor(r.id)}">${r.thumbnail_url ? `<img src="${esc(r.thumbnail_url)}" alt="" style="border-radius:8px">` : ''}</div><div><h3>${esc(r.title)}</h3><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill">${fdate(r.date)}</span><span class="pill ${r.x >= 1 ? 'good' : 'bad'}">${xfmt(r.x)} tu mediana de vistas</span></div></div></div>
-  <div class="stat3"><div class="stat"><div class="eyebrow">Views${r.promoted ? ' · promo' : ''}</div><div class="v">${r.views == null ? 'N/A' : r.views.toLocaleString('es')}</div>${r.views_organic != null && r.views_organic !== r.views ? `<div class="small" title="Lo que reporta la API de Meta sin anuncios">orgánicas ${r.views_organic.toLocaleString('es')}</div>` : ''}</div><div class="stat"><div class="eyebrow">Likes</div><div class="v">${r.likes ?? 0}</div></div><div class="stat"><div class="eyebrow">Comments</div><div class="v">${r.comments ?? 0}</div></div></div>
+  <div class="stat3"><div class="stat"><div class="eyebrow">Views${r.promoted ? ' · promo' : ''}</div><div class="v">${r.views == null ? 'N/A' : r.views.toLocaleString('es')}</div>${r.views_organic != null && r.views_organic !== r.views ? `<div class="small" title="Lo que reporta la API de Meta sin anuncios">orgánicas ${r.views_organic.toLocaleString('es')}</div>` : ''}<button class="btn sm ghost" style="margin-top:6px;padding:2px 8px;font-size:11px" title="Si Instagram muestra otro número (p. ej. por promoción pagada), escribilo acá" onclick="overrideViews('${r.id}')">${r.views_manual != null ? 'Editar' : 'Corregir'}</button></div><div class="stat"><div class="eyebrow">Likes</div><div class="v">${r.likes ?? 0}</div></div><div class="stat"><div class="eyebrow">Comments</div><div class="v">${r.comments ?? 0}</div></div></div>
   <div class="eyebrow" style="margin-bottom:8px">Métricas privadas (Meta API oficial${r.promoted ? ' · solo orgánico, sin anuncios' : ''})</div>
   <div class="stat4"><div class="stat"><div class="eyebrow">Reach</div><div class="v">${r.reach == null ? 'N/A' : r.reach.toLocaleString('es')}</div></div><div class="stat"><div class="eyebrow">Saves</div><div class="v">${r.saves ?? 'N/A'}</div></div><div class="stat"><div class="eyebrow">Shares</div><div class="v">${r.shares ?? 'N/A'}</div></div><div class="stat"><div class="eyebrow">ER %</div><div class="v">${r.er.toFixed(2)}%</div></div></div>
   <a class="btn" style="width:100%;justify-content:center" href="${esc(r.permalink)}" target="_blank" rel="noopener">${svgI.ext}Ver en Instagram</a>
