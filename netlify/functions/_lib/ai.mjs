@@ -19,8 +19,38 @@ export async function claude({ system, messages, max_tokens = 1800, temperature 
 
 export function extractJSON(text) {
   const m = text.match(/\{[\s\S]*\}/);
-  if (!m) return null;
-  try { return JSON.parse(m[0]); } catch { return null; }
+  if (!m) return repairJSON(text);
+  try { return JSON.parse(m[0]); } catch { return repairJSON(text); }
+}
+// Best-effort repair for model output: raw control chars inside strings, trailing commas,
+// and responses cut by max_tokens (closes open strings/arrays/objects).
+export function repairJSON(text) {
+  const start = text.indexOf('{'); if (start < 0) return null;
+  let s = text.slice(start).replace(/```/g, '');
+  let out = '', inStr = false, esc = false;
+  for (const ch of s) {
+    if (inStr) {
+      if (esc) { out += ch; esc = false; continue; }
+      if (ch === '\\') { out += ch; esc = true; continue; }
+      if (ch === '"') { inStr = false; out += ch; continue; }
+      if (ch === '\n') { out += '\\n'; continue; }
+      if (ch < ' ') { out += ' '; continue; }
+      out += ch; continue;
+    }
+    if (ch === '"') inStr = true;
+    out += ch;
+  }
+  if (inStr) out += '"';
+  // Cut a dangling `"key":` or `,` at the end, then close what is open.
+  out = out.replace(/,\s*$/, '').replace(/"[^"]*"\s*:\s*$/, '').replace(/,\s*$/, '');
+  const stack = []; inStr = false; esc = false;
+  for (const ch of out) {
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true; else if (ch === '{' || ch === '[') stack.push(ch === '{' ? '}' : ']'); else if (ch === '}' || ch === ']') stack.pop();
+  }
+  out += stack.reverse().join('');
+  out = out.replace(/,(\s*[}\]])/g, '$1');
+  try { return JSON.parse(out); } catch { return null; }
 }
 
 // ---- Supadata transcription -------------------------------------------------
