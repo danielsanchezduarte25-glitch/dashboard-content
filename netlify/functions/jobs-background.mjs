@@ -7,6 +7,7 @@ import './analyze.mjs';
 import './chat.mjs';
 import './top5.mjs';
 import './report.mjs';
+import './insights.mjs';
 
 export default async (req) => {
   if (req.headers.get('x-sync-secret') !== internalSecret()) return new Response('unauthorized', { status: 401 });

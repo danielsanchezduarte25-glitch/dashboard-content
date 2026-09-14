@@ -12,7 +12,7 @@ const prevMonth = (ym) => { const [y, m] = ym.split('-').map(Number); const d = 
 const sum = (a, k) => a.reduce((s, r) => s + (r[k] || 0), 0);
 const avg = (a, k) => { const v = a.map((r) => r[k]).filter((x) => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
 
-function agg(list) {
+export function agg(list) {
   const views = sum(list, 'views'), reach = sum(list, 'reach'), saves = sum(list, 'saves'), shares = sum(list, 'shares'), likes = sum(list, 'likes'), comments = sum(list, 'comments');
   const er = list.length ? list.reduce((s, r) => s + engagementRate(r), 0) / list.length : 0;
   const ret = list.filter((r) => r.avg_watch_time && r.duration); const retention = ret.length ? Math.round(ret.reduce((s, r) => s + Math.min(100, r.avg_watch_time / r.duration * 100), 0) / ret.length) : null;

@@ -170,3 +170,15 @@ test('monthly report: data + narrative', async () => {
   assert.equal(g2.narrative.headline, 'Mes sólido');
   assert.equal((await rep(req('/api/report?month=2026-13', { cookie }))).status, 400);
 });
+
+test('insights + estrategia del mes', async () => {
+  const ins = (await import('../netlify/functions/insights.mjs')).default;
+  const month = new Date().toISOString().slice(0, 7);
+  const g = await text(await ins(req('/api/insights?month=' + month, { cookie })));
+  assert.equal(g.stored, null); assert.ok(g.stats.total >= 3);
+  const r = await text(await ins(req('/api/insights', { method: 'POST', cookie, body: { month } })));
+  assert.equal(r.analysis.headline, 'Los tutoriales cortos ganan'); assert.equal(r.strategy.weeks.length, 1); assert.ok(r.analysis.hooks[0].formula);
+  const g2 = await text(await ins(req('/api/insights?month=' + month, { cookie })));
+  assert.equal(g2.stored.strategy.objective, '12 reels y 50k vistas');
+  assert.equal((await ins(req('/api/insights?month=abc', { cookie }))).status, 400);
+});

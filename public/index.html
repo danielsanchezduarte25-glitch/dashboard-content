@@ -57,7 +57,9 @@
     <div><h1 id="greet">Hola.</h1><p class="sub" id="greetSub">Resumen ejecutivo de Dashboard Content</p></div>
     <div style="display:flex;gap:8px;align-items:center"><span class="small" id="syncedAt"></span><button class="btn" onclick="openReportDialog()" title="Reporte mensual para el cliente (PDF)"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>Exportar reporte</button><button class="btn" id="syncBtn"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>Sincronizar</button></div>
   </div>
+  <div class="tabs" id="dashTabs" style="margin-bottom:14px"><button class="tab active" data-t="resumen" onclick="dashTab('resumen')">Resumen</button><button class="tab" data-t="insights" onclick="dashTab('insights')">✦ Insights &amp; estrategia</button></div>
   <div id="dashBody"></div>
+  <div id="insightsBody" hidden></div>
 </section>
 
 <!-- INSTAGRAM -->
@@ -318,5 +320,6 @@
 <script src="/sales.js"></script>
 <script src="/workspaces.js"></script>
 <script src="/report.js"></script>
+<script src="/insights.js"></script>
 </body>
 </html>
