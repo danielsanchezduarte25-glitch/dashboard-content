@@ -11,7 +11,7 @@ Panel privado para creadores de Instagram: métricas reales de tus reels (API of
 | Módulo | Qué hace | Datos |
 |---|---|---|
 | Workspaces | Un espacio por cliente con su propia contraseña e Instagram; el dueño cambia de workspace desde el menú, el cliente entra y ve solo lo suyo | Netlify Blobs (claves por workspace) |
-| Dashboard | Top 5 videos con IA (guion, estructura, comportamiento, retención, por qué gustan, cómo replicarlos) + KPIs (seguidores, reach, guardados, ER, reels, mediana, compartidos, mejor horario), reach mes a mes, objetivos, últimos reels. Vistas = las que muestra Instagram (incluyen promociones); sync automático diario | Instagram Graph API + Apify |
+| Dashboard | Botón **Exportar reporte**: reporte mensual imprimible/PDF para el cliente (números vs. mes anterior, reels, retención, pautado/orgánico, ventas, resumen IA con logros, aprendizajes y plan). Top 5 videos con IA (guion, estructura, comportamiento, retención, por qué gustan, cómo replicarlos) + KPIs (seguidores, reach, guardados, ER, reels, mediana, compartidos, mejor horario), reach mes a mes, objetivos, últimos reels. Vistas = las que muestra Instagram (incluyen promociones); sync automático diario | Instagram Graph API + Apify |
 | Instagram | Grilla de reels con filtros y buscador; panel con métricas privadas, transcripción y análisis IA descargable | Meta + Supadata + Anthropic |
 | Inspiración | Referentes, escaneo (Apify) o carga por URL (Supadata), score viral vs. mediana de la cuenta, "Adaptar a mi marca" | Supadata/Apify + Anthropic |
 | AI Chat | Conversaciones persistentes con un estratega que conoce tu kit de marca, tus reels y sus análisis | Anthropic |

@@ -158,3 +158,15 @@ test('workspaces: isolated data + client login + top5', async () => {
   await ws(req('/api/workspaces', { method: 'POST', cookie, body: { action: 'delete', id: 'la-cocina-de-papa' } }));
   assert.equal((await login(req('/api/login', { method: 'POST', body: { password: 'cliente123' } }))).status, 401);
 });
+
+test('monthly report: data + narrative', async () => {
+  const rep = (await import('../netlify/functions/report.mjs')).default;
+  const month = new Date().toISOString().slice(0, 7);
+  const g = await text(await rep(req('/api/report?month=' + month, { cookie })));
+  assert.ok(g.data.current.count >= 1); assert.equal(g.narrative, null); assert.equal(g.data.account.handle, '@soydanielsanchez_');
+  const r = await text(await rep(req('/api/report', { method: 'POST', cookie, body: { month } })));
+  assert.equal(r.narrative.headline, 'Mes sólido');
+  const g2 = await text(await rep(req('/api/report?month=' + month, { cookie })));
+  assert.equal(g2.narrative.headline, 'Mes sólido');
+  assert.equal((await rep(req('/api/report?month=2026-13', { cookie }))).status, 400);
+});
