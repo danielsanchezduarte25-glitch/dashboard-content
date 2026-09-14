@@ -1,7 +1,7 @@
 import { json, error, siteUrl, env } from './_lib/http.mjs';
 import { requireAuth } from './_lib/auth.mjs';
 import { getToken } from './_lib/instagram.mjs';
-import { del, getJSON, setJSON, K } from './_lib/store.mjs';
+import { del, getJSON, setJSON, getWorkspace, K } from './_lib/store.mjs';
 import { internalSecret, runSync } from './ig-sync-background.mjs';
 
 // POST  /api/ig/sync[?full=1]  → starts a background sync and returns { started:true, since }.
@@ -24,7 +24,7 @@ export default async (req) => {
   if (local) { await runSync({ full }); return json({ started: true, since: meta.synced_at || null, inline: true }); }
   // Fire the background function without waiting for it (Netlify answers 202 right away).
   try {
-    await fetch(`${siteUrl(req)}/api/ig/sync-background${full ? '?full=1' : ''}`, { method: 'POST', headers: { 'x-sync-secret': internalSecret() } });
+    await fetch(`${siteUrl(req)}/api/ig/sync-background?ws=${getWorkspace()}${full ? '&full=1' : ''}`, { method: 'POST', headers: { 'x-sync-secret': internalSecret() } });
   } catch (e) {
     await setJSON(K.syncMeta, { ...meta, running: false, error: 'No se pudo iniciar la sincronización: ' + e.message });
     return error('No se pudo iniciar la sincronización: ' + e.message, 502);

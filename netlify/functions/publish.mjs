@@ -7,7 +7,7 @@
 // DELETE /api/publish?id=                     → remove item + its media
 import { json, error, readJSON, siteUrl, env } from './_lib/http.mjs';
 import { requireAuth } from './_lib/auth.mjs';
-import { getJSON, setJSON, K } from './_lib/store.mjs';
+import { getJSON, setJSON, getWorkspace, K } from './_lib/store.mjs';
 import { PUBLISH_SCOPE } from './_lib/instagram.mjs';
 import { deleteMedia, processQueue } from './_lib/publish.mjs';
 import { internalSecret } from './ig-sync-background.mjs';
@@ -24,7 +24,7 @@ async function state() {
 async function kick(req, force) {
   const local = env('NETLIFY_DEV') || env('NODE_ENV') === 'test' || !env('URL');
   if (local) return processQueue({ base: siteUrl(req), force });
-  await fetch(`${siteUrl(req)}/api/publish-background${force?.length ? `?force=${force.join(',')}` : ''}`, { method: 'POST', headers: { 'x-sync-secret': internalSecret() } });
+  await fetch(`${siteUrl(req)}/api/publish-background?ws=${getWorkspace()}${force?.length ? `&force=${force.join(',')}` : ''}`, { method: 'POST', headers: { 'x-sync-secret': internalSecret() } });
   return { kicked: true };
 }
 

@@ -126,3 +126,35 @@ test('publish: chunked upload, media serving, queue and publishing', async () =>
   assert.equal(s.queue.length, 0);
   assert.equal((await serve(new Request('https://dc.test/media/m-test0001.mp4'))).status, 404);
 });
+
+test('workspaces: isolated data + client login + top5', async () => {
+  const ws = (await import('../netlify/functions/workspaces.mjs')).default;
+  const login = (await import('../netlify/functions/login.mjs')).default;
+  const reels = (await import('../netlify/functions/reels.mjs')).default;
+  const me = (await import('../netlify/functions/me.mjs')).default;
+  // owner sees 6 reels in main
+  assert.equal((await text(await reels(req('/api/reels', { cookie })))).reels.length, 6);
+  let r = await text(await ws(req('/api/workspaces', { method: 'POST', cookie, body: { action: 'create', name: 'La Cocina de Papá', handle: '@lacocina', password: 'cliente123' } })));
+  assert.equal(r.workspace.id, 'la-cocina-de-papa'); assert.equal(r.workspace.handle, 'lacocina');
+  // client login with its own password → role client, scoped storage (no reels)
+  const cl = await login(req('/api/login', { method: 'POST', body: { password: 'cliente123' } }));
+  assert.equal(cl.status, 200); const ccookie = cl.headers.get('set-cookie').split(';')[0];
+  const cme = await text(await me(req('/api/me', { cookie: ccookie })));
+  assert.equal(cme.role, 'client'); assert.equal(cme.workspace.id, 'la-cocina-de-papa'); assert.equal(cme.workspaces, undefined); assert.equal(cme.brandkit.owner, 'La Cocina de Papá');
+  assert.equal((await text(await reels(req('/api/reels', { cookie: ccookie })))).reels.length, 0);
+  // client cannot manage workspaces
+  assert.equal((await ws(req('/api/workspaces', { method: 'POST', cookie: ccookie, body: { action: 'create', name: 'x', password: 'abcdefg' } }))).status, 403);
+  // owner switches into the client workspace
+  const sw = await ws(req('/api/workspaces', { method: 'POST', cookie, body: { action: 'switch', id: 'la-cocina-de-papa' } }));
+  const ocookie = sw.headers.get('set-cookie').split(';')[0];
+  const ome = await text(await me(req('/api/me', { cookie: ocookie })));
+  assert.equal(ome.role, 'owner'); assert.equal(ome.workspace.id, 'la-cocina-de-papa'); assert.equal(ome.workspaces.length, 2);
+  // back in main, top5 works
+  const top5 = (await import('../netlify/functions/top5.mjs')).default;
+  const t = await text(await top5(req('/api/top5', { method: 'POST', cookie, body: {} })));
+  assert.equal(t.items.length, 5); assert.equal(t.items[0].ai.hook, 'h'); assert.ok(t.summary);
+  assert.equal((await text(await top5(req('/api/top5', { cookie })))).report.items.length, 5);
+  // delete workspace → client login stops working
+  await ws(req('/api/workspaces', { method: 'POST', cookie, body: { action: 'delete', id: 'la-cocina-de-papa' } }));
+  assert.equal((await login(req('/api/login', { method: 'POST', body: { password: 'cliente123' } }))).status, 401);
+});

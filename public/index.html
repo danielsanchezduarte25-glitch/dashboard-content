@@ -29,6 +29,7 @@
 <div class="app hidden" id="app">
 <aside class="side">
   <div class="brand"><img class="logo-img" src="/coda-logo.png" alt="CODA"><div><b>CODA</b><span>Dashboard</span></div></div>
+  <div class="wsbox" id="wsBox" hidden></div>
   <nav class="nav" id="nav">
     <button data-view="dashboard" class="active"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
     <button data-view="instagram"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor"/></svg>Instagram</button>
@@ -39,6 +40,7 @@
     <button data-view="publicar"><svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>Publicar</button>
     <button data-view="ventas"><svg viewBox="0 0 24 24"><path d="M3 3h2l2.5 12h11L21 7H6.5"/><circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg>Ventas</button>
     <button data-view="calendario"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario</button>
+    <button data-view="workspaces" id="navWorkspaces" hidden><svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><rect x="13" y="13" width="8" height="7" rx="1.5"/></svg>Workspaces</button>
     <button data-view="ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Ajustes</button>
   </nav>
   <div class="spacer"></div>
@@ -267,6 +269,15 @@
   <div class="card upnext"><div class="eyebrow">Próximos 7 días</div><div id="upnext" style="margin-top:10px"></div></div>
 </section>
 
+<!-- WORKSPACES -->
+<section class="view" id="view-workspaces">
+  <div class="page-h">
+    <div><h1>Workspaces</h1><p class="sub">Un espacio por cliente, con su propia contraseña, su Instagram, sus reels, ventas y análisis. Vos entrás a cualquiera desde acá; el cliente entra con su contraseña y solo ve lo suyo.</p></div>
+    <button class="btn primary" onclick="wsForm()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo cliente</button>
+  </div>
+  <div id="wsList" class="grid ws-grid"></div>
+</section>
+
 <!-- AJUSTES -->
 <section class="view" id="view-ajustes">
   <div class="page-h"><div><h1>Ajustes</h1><p class="sub">Conexiones, objetivos y kit de marca (lo que la IA sabe de vos).</p></div></div>
@@ -305,5 +316,6 @@
 <script src="/studio.js"></script>
 <script src="/publish.js"></script>
 <script src="/sales.js"></script>
+<script src="/workspaces.js"></script>
 </body>
 </html>

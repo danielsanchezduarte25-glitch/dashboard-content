@@ -72,7 +72,7 @@ async function boot() {
   if (!me.authed) { showLogin(); if (!me.config.hasPassword) $('#loginErr').textContent = 'Falta configurar APP_PASSWORD en Netlify.'; return; }
   S.me = me; S.goals = me.goals; S.brand = me.brandkit;
   showApp();
-  renderUser(); renderSetup();
+  renderUser(); renderSetup(); window.renderWorkspaceBox?.();
   const p = new URLSearchParams(location.search);
   if (p.get('connected')) { toast('Instagram conectado. Sincronizando…'); history.replaceState({}, '', '/'); }
   if (p.get('ig_error')) { openModal(`<h3>No se pudo conectar Instagram</h3><p class="sub">${esc(p.get('ig_error'))}</p><p class="small">Revisá en Meta for Developers que la URL de redirección sea exactamente <code>${location.origin}/api/ig/callback</code> y que tu cuenta esté agregada como tester (docs/SETUP.md).</p>`); history.replaceState({}, '', '/'); }
@@ -117,6 +117,7 @@ function go(v) {
   if (v === 'historias') window.initStories?.();
   if (v === 'publicar') window.initPublish?.();
   if (v === 'ventas') window.initSales?.();
+  if (v === 'workspaces') window.initWorkspaces?.();
 }
 function safeLS(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { return null; } }
 $('#nav').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) go(b.dataset.view); });
@@ -205,6 +206,8 @@ function renderDashboard() {
   <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div><div class="eyebrow">Últimos reels</div><h2 style="margin-top:4px">Rendimiento reciente</h2></div><button class="btn sm ghost" onclick="go('instagram')">Ver todos →</button></div>
   <div style="overflow-x:auto"><table><thead><tr><th>Reel</th><th>Fecha</th><th class="num">Vistas</th><th class="num">Reach</th><th class="num">Guardados</th><th class="num">ER</th><th class="num">vs mediana</th><th>Tipo</th><th>IA</th></tr></thead><tbody>${rec.map((r) => `<tr style="cursor:pointer" onclick="openReel('${r.id}')"><td><div class="mini"><div class="th" style="background:${gradFor(r.id)}">${r.thumbnail_url ? `<img src="${esc(r.thumbnail_url)}" alt="" loading="lazy" style="border-radius:5px">` : ''}</div><span style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">${esc(r.title)}</span></div></td><td style="color:var(--muted)">${fdate(r.date)}</td><td class="num">${fmt(r.views)}</td><td class="num">${fmt(r.reach)}</td><td class="num">${fmt(r.saves)}</td><td class="num">${r.er.toFixed(2)}%</td><td class="num"><span class="pill ${r.x >= 1 ? 'good' : 'bad'}">${xfmt(r.x)}</span></td><td>${r.promoted ? '<span class="pill warn">Pautado</span>' : '<span class="pill good">Orgánico</span>'}</td><td>${r.analyzed ? '<span class="pill good">✓</span>' : '<span class="pill">—</span>'}</td></tr>`).join('')}</tbody></table></div></div>`;
   renderChart(d.monthly);
+  $('#dashBody').insertAdjacentHTML('beforeend', '<div class="card top5" id="top5Card"></div>');
+  renderTop5();
 }
 
 function renderChart(monthly) {
@@ -483,3 +486,22 @@ $('#saveGoals').addEventListener('click', async () => { S.goals = { followers: +
 $('#saveBrand').addEventListener('click', async () => { S.brand = { owner: $('#bOwner').value, handle: $('#bHandle').value, positioning: $('#bPositioning').value, audience: $('#bAudience').value, tone: $('#bTone').value, pillars: $('#bPillars').value.split('\n').map((s) => s.trim()).filter(Boolean), ctaStyle: $('#bCta').value, avoid: $('#bAvoid').value.split('\n').map((s) => s.trim()).filter(Boolean) }; try { await api('/api/data?key=brandkit', { method: 'PUT', body: { value: S.brand } }); toast('Kit de marca guardado'); renderUser(); } catch (e) { toast(e.message); } });
 
 boot().catch((e) => { showLogin(); $('#loginErr').textContent = e.message; });
+
+/* ================= TOP 5 (por qué funcionan) ================= */
+async function renderTop5(report) {
+  const el = $('#top5Card'); if (!el) return;
+  if (!report && !S.top5Loaded) { try { S.top5 = (await api('/api/top5')).report; } catch { S.top5 = null; } S.top5Loaded = true; }
+  const r = report || S.top5;
+  const btn = `<button class="btn sm ${r ? '' : 'primary'}" id="top5Btn" ${S.me.config.hasAnthropic ? '' : 'disabled title="Falta ANTHROPIC_API_KEY"'} onclick="runTop5()">✦ ${r ? 'Volver a analizar' : 'Analizar top 5 con IA'}</button>`;
+  if (!r) { el.innerHTML = `<div class="hd"><div><div class="eyebrow">Top 5 videos</div><h2 style="margin-top:4px">Qué está funcionando y por qué</h2><p class="sub" style="font-size:13px">La IA toma los 5 reels con mejor rendimiento (vistas vs. tu mediana, engagement, guardados y compartidos), los transcribe y te explica guion, estructura, comportamiento, retención, por qué gustan y cómo replicarlos.</p></div>${btn}</div>`; return; }
+  const secs = (a) => [['Hook', a.hook], ['Guion', a.script], ['Estructura', a.structure], ['Comportamiento', a.behavior], ['Retención', a.retention], ['Por qué gusta', a.why], ['Cómo replicarlo', a.replicate]].filter((x) => x[1]).map(([t, v]) => `<div class="sec"><div class="eyebrow">${t}</div><pre>${esc(v)}</pre></div>`).join('') + (a.template ? `<div class="sec full"><div class="eyebrow">Plantilla para grabar una nueva versión <button class="btn sm ghost" style="float:right" onclick="event.stopPropagation();copyText(${JSON.stringify(a.template)})">⧉ Copiar</button></div><pre>${esc(a.template)}</pre></div>` : '');
+  el.innerHTML = `<div class="hd"><div><div class="eyebrow">Top 5 videos · ${new Date(r.generatedAt).toLocaleDateString('es')}</div><h2 style="margin-top:4px">Qué está funcionando y por qué</h2></div>${btn}</div>
+  <p style="color:var(--ink2);font-size:13px;line-height:1.55;margin:0">${esc(r.summary || '')}</p>
+  <div class="patterns">${(r.patterns || []).map((p) => `<span class="pill good">${esc(p)}</span>`).join('')}</div>
+  ${r.items.map((it, i) => `<div class="t5" id="t5-${i}"><div class="row" onclick="this.parentElement.classList.toggle('open')"><div class="rank">${i + 1}</div><div class="th" style="background:${gradFor(it.id)}">${it.thumbnail_url ? `<img src="${esc(it.thumbnail_url)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div><div class="ttl"><b>${esc(it.title)}</b><div class="nums"><span>${fmt(it.views)} vistas · ${xfmt(it.x)}</span><span>ER ${it.er}%</span><span>${it.saves ?? '–'} guardados</span><span>${it.shares ?? '–'} compartidos</span>${it.retention != null ? `<span title="tiempo medio de visualización / duración">retención ${it.retention}%</span>` : it.avg_watch_time ? `<span>${it.avg_watch_time.toFixed(1)} s vistos en promedio</span>` : ''}${it.promoted ? '<span class="pill warn" style="padding:1px 6px">pautado</span>' : ''}</div>${it.retention != null ? `<div class="retbar"><i style="width:${it.retention}%"></i></div>` : ''}</div><a class="iconbtn" href="${esc(it.permalink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Ver en Instagram">${svgI.ext}</a><span class="small">▾</span></div><div class="body">${secs(it.ai || {})}</div></div>`).join('')}`;
+}
+async function runTop5() {
+  const b = $('#top5Btn'); if (b) { b.disabled = true; b.innerHTML = '<span class="spin"></span> Transcribiendo y analizando (1–3 min)…'; }
+  try { const r = await api('/api/top5', { method: 'POST', body: { force: true }, timeoutMs: 400000 }); S.top5 = r; renderTop5(r); toast('Top 5 analizado ✓'); $('#top5Card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  catch (e) { toast(e.message, 6000); renderTop5(); }
+}

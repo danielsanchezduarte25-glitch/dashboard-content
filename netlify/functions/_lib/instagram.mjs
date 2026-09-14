@@ -88,24 +88,22 @@ export async function fetchAllMedia(token, max = 200) {
 }
 
 // Reels metrics (2025+): views replaced plays. Some accounts lack 'shares' → N/A.
-const REEL_METRICS = ['views', 'reach', 'saved', 'shares', 'likes', 'comments', 'total_interactions'];
+const BASE_METRICS = ['views', 'reach', 'saved', 'shares', 'likes', 'comments', 'total_interactions'];
+// Watch-time metrics (retention) exist only for reels; not every account/reel supports them.
+const WATCH_METRICS = ['ig_reels_avg_watch_time', 'ig_reels_video_view_total_time'];
 
 export async function fetchMediaInsights(token, media) {
-  const isVideo = media.media_type === 'VIDEO' || media.media_product_type === 'REELS';
-  const metrics = isVideo ? REEL_METRICS : ['views', 'reach', 'saved', 'shares', 'likes', 'comments', 'total_interactions'];
+  const isReel = media.media_product_type === 'REELS';
   const tryMetrics = async (list) => {
     const r = await igFetch(`${GRAPH}/${VER}/${media.id}/insights?metric=${list.join(',')}&access_token=${encodeURIComponent(token.access_token)}`);
     const out = {};
     for (const m of r.data || []) out[m.name] = m.values?.[0]?.value ?? m.total_value?.value ?? null;
     return out;
   };
-  try { return await tryMetrics(metrics); }
-  catch (e) {
-    // Older media or unsupported metric → drop the offending metric and retry once.
-    const unsupported = (e.data?.error?.message || '').match(/metric\[\d+\] must be one of|does not support the (\w+) metric|(\w+) metric/i);
-    const fallback = metrics.filter((m) => m !== 'shares' && m !== 'views');
-    try { return await tryMetrics(fallback); } catch { return {}; }
-  }
+  // Try from richest to poorest metric set; Meta rejects the whole call if one metric is unsupported.
+  const attempts = isReel ? [[...BASE_METRICS, ...WATCH_METRICS], BASE_METRICS, BASE_METRICS.filter((m) => m !== 'shares' && m !== 'views')] : [BASE_METRICS, BASE_METRICS.filter((m) => m !== 'shares' && m !== 'views')];
+  for (const list of attempts) { try { return await tryMetrics(list); } catch { /* next */ } }
+  return {};
 }
 
 // ---- Public counters (what Instagram shows in the grid) ---------------------
@@ -126,7 +124,7 @@ export async function fetchPublicCounts(username, limit = 80) {
   for (const r of rows) {
     const code = r.shortCode || (r.url || '').match(/\/(?:reel|p)\/([^/?]+)/)?.[1];
     if (!code) continue;
-    byCode.set(code, { views: r.videoPlayCount ?? r.videoViewCount ?? r.playCount ?? null, likes: r.likesCount ?? null, comments: r.commentsCount ?? null });
+    byCode.set(code, { views: r.videoPlayCount ?? r.videoViewCount ?? r.playCount ?? null, likes: r.likesCount ?? null, comments: r.commentsCount ?? null, duration: r.videoDuration ?? null });
   }
   return byCode;
 }
@@ -153,6 +151,9 @@ export function normalizeReel(m, ins = {}) {
     saves: ins.saved ?? null,
     shares: ins.shares ?? null,
     total_interactions: ins.total_interactions ?? null,
+    // Retention (Meta reports milliseconds): average seconds watched per view + total watch time.
+    avg_watch_time: ins.ig_reels_avg_watch_time != null ? Math.round(ins.ig_reels_avg_watch_time) / 1000 : null,
+    total_watch_time: ins.ig_reels_video_view_total_time ?? null,
   };
 }
 
@@ -171,12 +172,13 @@ export async function syncAll(token, { full = false } = {}) {
     const old = prevById.get(m.id);
     const ins = await fetchMediaInsights(token, m);
     const r = normalizeReel(m, ins);
-    if (r.views_organic == null && old) { r.views = old.views ?? null; r.views_organic = old.views_organic ?? null; r.reach = old.reach ?? null; r.saves = old.saves ?? null; r.shares = old.shares ?? null; }
+    if (r.views_organic == null && old) { r.views = old.views ?? null; r.views_organic = old.views_organic ?? null; r.reach = old.reach ?? null; r.saves = old.saves ?? null; r.shares = old.shares ?? null; r.avg_watch_time = old.avg_watch_time ?? null; r.total_watch_time = old.total_watch_time ?? null; }
     return old ? { ...old, ...r } : r;
   });
   await pubP;
   for (const r of reels) {
     const p = pub?.get(shortcode(r.permalink));
+    if (p && p.duration) r.duration = p.duration;
     if (p && p.views != null) {
       r.views_public = p.views;
       r.views = Math.max(p.views, r.views_organic || 0);

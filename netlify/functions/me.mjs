@@ -1,6 +1,6 @@
 import { json, env } from './_lib/http.mjs';
 import { getSession } from './_lib/auth.mjs';
-import { getJSON, K } from './_lib/store.mjs';
+import { getJSON, setWorkspace, getWorkspace, K } from './_lib/store.mjs';
 import { DEFAULT_BRANDKIT } from './_lib/ai.mjs';
 
 // Session + configuration status. Safe to call before login (returns authed:false).
@@ -19,8 +19,14 @@ export default async (req) => {
   const [token, profile, brandkit, goals] = await Promise.all([
     getJSON(K.igToken), getJSON(K.profile), getJSON(K.brandkit), getJSON(K.goals),
   ]);
+  const ws = getWorkspace(); setWorkspace('main');
+  const all = (await getJSON(K.workspaces, [])) || []; setWorkspace(ws);
+  const wsInfo = ws === 'main' ? { id: 'main', name: 'Mi cuenta', handle: '' } : (({ id, name, handle, color }) => ({ id, name, handle, color }))(all.find((w) => w.id === ws) || { id: ws, name: ws });
   return json({
     authed: true,
+    role: session.role || 'owner',
+    workspace: wsInfo,
+    workspaces: (session.role || 'owner') === 'owner' ? [{ id: 'main', name: 'Mi cuenta', handle: '' }, ...all.map(({ id, name, handle, color }) => ({ id, name, handle, color }))] : undefined,
     config: cfg,
     instagram: token ? { connected: true, user_id: token.user_id, obtained_at: token.obtained_at, expires_in: token.expires_in, permissions: token.permissions ? String(token.permissions).split(',') : null, canPublish: !token.permissions || String(token.permissions).includes('instagram_business_content_publish') } : { connected: false },
     profile: profile || null,

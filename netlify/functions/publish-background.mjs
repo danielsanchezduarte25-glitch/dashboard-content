@@ -3,11 +3,15 @@ import { env, siteUrl } from './_lib/http.mjs';
 import { getSession } from './_lib/auth.mjs';
 import { internalSecret } from './ig-sync-background.mjs';
 import { processQueue } from './_lib/publish.mjs';
+import { setWorkspace } from './_lib/store.mjs';
 
 export default async (req) => {
-  const ok = getSession(req) || req.headers.get('x-sync-secret') === internalSecret();
+  const u = new URL(req.url);
+  const internal = req.headers.get('x-sync-secret') === internalSecret();
+  const ok = getSession(req) || internal;
   if (!ok) return new Response('unauthorized', { status: 401 });
-  const force = (new URL(req.url).searchParams.get('force') || '').split(',').filter(Boolean);
+  if (internal && u.searchParams.get('ws')) setWorkspace(u.searchParams.get('ws'));
+  const force = (u.searchParams.get('force') || '').split(',').filter(Boolean);
   const r = await processQueue({ base: siteUrl(req), force });
   console.log('publish queue processed', JSON.stringify(r));
   return new Response('ok', { status: 200 });

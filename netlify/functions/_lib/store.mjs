@@ -7,7 +7,17 @@ function store() {
   return _store;
 }
 
+// ---- Workspaces: every key is scoped to the current workspace ("main" = the owner, keeps the
+// original unprefixed keys). Netlify runs one request per function instance, so a module-level
+// current workspace is safe; background/scheduled functions set it explicitly.
+let currentWs = 'main';
+export const setWorkspace = (id) => { currentWs = /^[a-z0-9-]{2,40}$/.test(id || '') ? id : 'main'; };
+export const getWorkspace = () => currentWs;
+const GLOBAL_KEY = /^(workspaces\/|jobs\/|media\/)/;
+export const scoped = (key) => (currentWs === 'main' || GLOBAL_KEY.test(key) ? key : `ws/${currentWs}/${key}`);
+
 export async function getJSON(key, fallback = null) {
+  key = scoped(key);
   try {
     const v = await store().get(key, { type: 'json' });
     return v ?? fallback;
@@ -18,6 +28,7 @@ export async function getJSON(key, fallback = null) {
 }
 
 export async function setJSON(key, value) {
+  key = scoped(key);
   try {
     await store().setJSON(key, value);
   } catch (e) {
@@ -28,6 +39,7 @@ export async function setJSON(key, value) {
 }
 
 export async function del(key) {
+  key = scoped(key);
   try { await store().delete(key); } catch { mem.delete(key); }
 }
 
@@ -75,6 +87,8 @@ export const K = {
   goals: 'settings/goals',
   brandkit: 'settings/brandkit',
   oauthState: 'ig/oauth-state',
+  workspaces: 'workspaces/list',   // GLOBAL: [ { id, name, handle, pass:{salt,hash}, created } ]
+  top5: 'analysis/top5',           // { generatedAt, items:[...] }
   publishQueue: 'publish/queue', // [ { id, kind, media:[{id,type,name,size}], caption, scheduledAt, status, ... } ]
   publishLock: 'publish/lock',
   job: (id) => `jobs/${id}`,                 // { id, kind, status, result|error }

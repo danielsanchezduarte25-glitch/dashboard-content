@@ -5,12 +5,13 @@ import { internalSecret, executeJob } from './_lib/jobs.mjs';
 import './bangers.mjs';
 import './analyze.mjs';
 import './chat.mjs';
+import './top5.mjs';
 
 export default async (req) => {
   if (req.headers.get('x-sync-secret') !== internalSecret()) return new Response('unauthorized', { status: 401 });
   const id = new URL(req.url).searchParams.get('id');
-  const { kind, params } = await readJSON(req);
-  await executeJob(id, kind, params);
+  const { kind, params, ws } = await readJSON(req);
+  await executeJob(id, kind, params, ws || 'main');
   return new Response('ok', { status: 200 });
 };
 

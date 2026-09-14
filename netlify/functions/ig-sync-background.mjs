@@ -5,7 +5,7 @@ import { createHmac } from 'node:crypto';
 import { env } from './_lib/http.mjs';
 import { getSession } from './_lib/auth.mjs';
 import { getToken, syncAll } from './_lib/instagram.mjs';
-import { getJSON, setJSON, del, K } from './_lib/store.mjs';
+import { getJSON, setJSON, del, setWorkspace, K } from './_lib/store.mjs';
 
 export const internalSecret = () => createHmac('sha256', env('SESSION_SECRET') || env('APP_PASSWORD') || 'dev').update('internal-sync').digest('hex');
 
@@ -24,9 +24,12 @@ export async function runSync({ full = false } = {}) {
 }
 
 export default async (req) => {
-  const ok = getSession(req) || req.headers.get('x-sync-secret') === internalSecret();
+  const u = new URL(req.url);
+  const internal = req.headers.get('x-sync-secret') === internalSecret();
+  const ok = getSession(req) || internal;
   if (!ok) return new Response('unauthorized', { status: 401 });
-  const full = new URL(req.url).searchParams.get('full') === '1';
+  if (internal && u.searchParams.get('ws')) setWorkspace(u.searchParams.get('ws'));
+  const full = u.searchParams.get('full') === '1';
   await runSync({ full });
   return new Response('ok', { status: 200 });
 };

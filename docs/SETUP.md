@@ -47,6 +47,9 @@ Tu cuenta ya es **Creator**, que es lo que hace falta. Lo que sigue es registrar
 ### Vistas iguales a Instagram y sincronización automática
 La API de Meta solo devuelve métricas **orgánicas**: un reel promocionado muestra, por ejemplo, 2.035 vistas en la app y 622 en la API. Por eso, si tenés `APIFY_TOKEN`, el dashboard lee además el contador público de cada reel y usa ese número como "vistas" (el orgánico queda como detalle). Todo se resincroniza solo cada día a las 06:00 (Costa Rica) y al abrir el panel si los datos tienen más de 6 horas.
 
+### Workspaces (clientes)
+En **Workspaces → Nuevo cliente** creás un espacio con nombre, @ y contraseña. Vos entrás con el selector del menú; el cliente entra en la misma URL con su contraseña y ve solo su espacio. Para que su Instagram se conecte, el cliente (o vos dentro de su workspace, con su sesión de Instagram) toca **Conectar Instagram**; mientras la app de Meta esté en modo desarrollo, su cuenta debe estar agregada como tester en developers.facebook.com → Instagram → API setup → Add account.
+
 ### Publicar desde el dashboard
 El módulo **Publicar** usa el permiso `instagram_business_content_publish`. Si conectaste Instagram antes de que existiera, entrá a Publicar → **Reconectar Instagram** y aceptá el permiso. Los archivos se suben al sitio (Netlify Blobs) y Meta los toma desde `https://TU-SITIO.netlify.app/media/…`; requisitos de Instagram: video MP4/MOV (H.264 + AAC) de 3 s a 15 min, imágenes JPEG (las PNG se convierten solas). Los posts programados se publican con una tarea automática cada 5 minutos.
 
