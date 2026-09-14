@@ -2,7 +2,7 @@
 // why people like them and how to replicate them. Runs as a background job (transcripts + Claude).
 // GET  /api/top5          → stored report
 // POST /api/top5 {force?} → (re)generate
-import { json, error, readJSON, median, engagementRate } from './_lib/http.mjs';
+import { json, error, readJSON, median, engagementRate, mapLimit } from './_lib/http.mjs';
 import { requireAuth } from './_lib/auth.mjs';
 import { getJSON, setJSON, K } from './_lib/store.mjs';
 import { claude, extractJSON, transcribeUrl, buildContext, systemPrompt } from './_lib/ai.mjs';
@@ -36,14 +36,25 @@ async function generate({ force = false } = {}) {
   }
   const ctx = await buildContext();
   const fmtR = (r) => `views ${r.views ?? 'n/d'} (${med ? ((r.views || 0) / med).toFixed(1) : '?'}× la mediana ${med}) · reach ${r.reach ?? 'n/d'} · likes ${r.likes ?? 0} · comentarios ${r.comments ?? 0} · guardados ${r.saves ?? 'n/d'} · compartidos ${r.shares ?? 'n/d'} · ER ${engagementRate(r).toFixed(2)}%${r.duration ? ` · duración ${Math.round(r.duration)} s` : ''}${r.avg_watch_time ? ` · tiempo medio de visualización ${r.avg_watch_time.toFixed(1)} s${r.duration ? ` (${Math.min(100, Math.round(r.avg_watch_time / r.duration * 100))}% de retención)` : ''}` : ' · retención: no disponible en la API'}${r.promoted ? ' · PAUTADO (parte de las vistas es pagada)' : ' · 100% orgánico'}`;
-  const block = items.map((it, i) => `### VIDEO ${i + 1} — "${it.reel.title}" (${it.reel.date})\nMÉTRICAS: ${fmtR(it.reel)}\nCAPTION: ${(it.reel.caption || '').slice(0, 400)}\nTRANSCRIPCIÓN: ${it.transcript ? it.transcript.slice(0, 2500) : '(sin transcripción disponible; analizá con caption y métricas)'}`).join('\n\n');
-  const text = await claude({
-    system: systemPrompt(ctx, 'Ahora sos analista de contenido: explicás con datos por qué ciertos videos funcionan y cómo replicarlos. Sé concreto, sin relleno.'),
-    messages: [{ role: 'user', content: `Estos son los 5 reels que mejor funcionan de la cuenta (ordenados de mejor a peor por un score de vistas vs. mediana, engagement y guardados/compartidos).\n\n${block}\n\nDevolvé SOLO un JSON válido con esta forma exacta:\n{"summary":"3-4 líneas: qué tienen en común los 5 y la lección principal","patterns":["patrón 1","patrón 2","patrón 3","patrón 4"],"items":[{"index":1,"title":"título corto","hook":"el gancho literal de los primeros 3 s y por qué funciona","script":"guion resumido en 4-8 líneas, en el orden en que se dice","structure":"estructura por bloques con segundos aproximados, p. ej. 0-3 s gancho · 3-15 s contexto · 15-40 s valor · 40-45 s CTA","behavior":"lectura de las métricas: qué hizo la audiencia (vio, guardó, compartió, comentó) y qué significa","retention":"análisis de retención con el dato disponible (tiempo medio / duración) o, si no hay dato, la retención estimada por la estructura y qué la sostiene","why":"por qué a la gente le gusta más este video (emoción, utilidad, identidad, curiosidad, prueba social…)","replicate":"receta para replicarlo: fórmula del hook, formato, duración, ritmo, CTA — como instrucciones accionables","template":"plantilla de guion lista para grabar una nueva versión sobre otro tema, con los huecos entre corchetes"}]}` }],
-    max_tokens: 4500, temperature: 0.5,
+  const sys = systemPrompt(ctx, 'Ahora sos analista de contenido: explicás con datos por qué ciertos videos funcionan y cómo replicarlos. Sé concreto, sin relleno. Respondés SOLO con JSON válido (sin markdown), con saltos de línea escapados como \\n.');
+  // One Claude call per video (robust, short outputs), 2 at a time.
+  const perVideo = await mapLimit(items, 2, async (it, i) => {
+    const r = it.reel;
+    const prompt = `VIDEO ${i + 1} de 5 (ranking por vistas vs. mediana, engagement y guardados/compartidos) — "${r.title}" (${r.date})\nMÉTRICAS: ${fmtR(r)}\nCAPTION: ${(r.caption || '').slice(0, 400)}\nTRANSCRIPCIÓN: ${it.transcript ? it.transcript.slice(0, 3000) : '(sin transcripción disponible; analizá con caption y métricas)'}\n\nDevolvé SOLO este JSON:\n{"title":"título corto","hook":"el gancho literal de los primeros 3 s y por qué funciona","script":"guion resumido en 4-8 líneas en el orden en que se dice","structure":"estructura por bloques con segundos aproximados (0-3 s gancho · 3-15 s contexto · ... · CTA)","behavior":"lectura de las métricas: qué hizo la audiencia (vio, guardó, compartió, comentó) y qué significa","retention":"análisis de retención con el dato disponible (tiempo medio / duración) o, si no hay dato, la retención estimada por la estructura y qué la sostiene","why":"por qué a la gente le gusta más este video (emoción, utilidad, identidad, curiosidad, prueba social…)","replicate":"receta accionable para replicarlo: fórmula del hook, formato, duración, ritmo, CTA","template":"plantilla de guion lista para grabar una nueva versión sobre otro tema, con huecos entre corchetes"}`;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const text = await claude({ system: sys, messages: [{ role: 'user', content: prompt }], max_tokens: 2200, temperature: 0.5 });
+        const j = extractJSON(text); if (j?.hook) return j;
+      } catch (e) { if (attempt) throw e; }
+    }
+    return { title: r.title, hook: '(no se pudo analizar este video; volvé a intentar)' };
   });
-  const data = extractJSON(text);
-  if (!data?.items) throw Object.assign(new Error('La IA no devolvió un análisis válido; intentá de nuevo.'), { status: 502 });
+  let meta = { summary: '', patterns: [] };
+  try {
+    const text = await claude({ system: sys, messages: [{ role: 'user', content: `Estos son los hooks y métricas de los 5 mejores reels de la cuenta:\n${items.map((it, i) => `${i + 1}. "${it.reel.title}" — ${fmtR(it.reel)} — hook: ${(perVideo[i]?.hook || '').slice(0, 200)}`).join('\n')}\n\nDevolvé SOLO este JSON: {"summary":"3-4 líneas: qué tienen en común los 5 y la lección principal para la cuenta","patterns":["patrón 1","patrón 2","patrón 3","patrón 4"]}` }], max_tokens: 700, temperature: 0.5 });
+    meta = extractJSON(text) || meta;
+  } catch (e) { console.warn('top5 summary failed', e.message); }
+  const data = { summary: meta.summary, patterns: meta.patterns, items: perVideo.map((a, i) => ({ index: i + 1, ...a })) };
   const report = { generatedAt: new Date().toISOString(), median: med, summary: data.summary, patterns: data.patterns || [], items: items.map((it, i) => ({ id: it.reel.id, title: it.reel.title, permalink: it.reel.permalink, thumbnail_url: it.reel.thumbnail_url, date: it.reel.date, views: it.reel.views, x: med ? +((it.reel.views || 0) / med).toFixed(1) : null, er: +engagementRate(it.reel).toFixed(2), saves: it.reel.saves, shares: it.reel.shares, comments: it.reel.comments, duration: it.reel.duration, avg_watch_time: it.reel.avg_watch_time, retention: it.reel.avg_watch_time && it.reel.duration ? Math.min(100, Math.round(it.reel.avg_watch_time / it.reel.duration * 100)) : null, promoted: !!it.reel.promoted, hasTranscript: !!it.transcript, ai: data.items.find((x) => x.index === i + 1) || data.items[i] || {} })) };
   await setJSON(K.top5, report);
   return report;
