@@ -117,7 +117,7 @@ function go(v) {
   if (v === 'historias') window.initStories?.();
   if (v === 'publicar') window.initPublish?.();
   if (v === 'ventas') window.initSales?.();
-  if (v === 'workspaces') window.initWorkspaces?.();
+  if (v === 'workspaces') { if (S.me?.role !== 'owner') return go('dashboard'); window.initWorkspaces?.(); }
 }
 function safeLS(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { return null; } }
 $('#nav').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) go(b.dataset.view); });

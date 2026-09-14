@@ -16,10 +16,11 @@
       box.innerHTML = `<span class="dot" style="background:${cur.id === 'main' ? 'var(--accent)' : colorFor(cur.id)}"></span><select id="wsSelect" title="Cambiar de workspace">${list.map((w) => `<option value="${w.id}" ${w.id === cur.id ? 'selected' : ''}>${esc(w.name)}${w.handle ? ' · @' + esc(w.handle) : ''}</option>`).join('')}</select>`;
       $('#wsSelect').onchange = (e) => switchWorkspace(e.target.value);
     } else {
-      $('#navWorkspaces').hidden = true;
-      box.innerHTML = `<span class="dot" style="background:${colorFor(cur.id)}"></span><span class="lbl" title="Tu workspace">${esc(cur.name)}</span><span class="small">cliente</span>`;
+      // Client session: no workspace management at all — remove the menu entry and the section from the page.
+      $('#navWorkspaces')?.remove(); $('#view-workspaces')?.remove();
+      box.innerHTML = `<span class="dot" style="background:${colorFor(cur.id)}"></span><span class="lbl" title="Tu espacio">${esc(cur.name)}</span>`;
+      if (safeLS('dc-view') === 'workspaces') go('dashboard');
     }
-    if (me.role !== 'owner' && location.hash === '#workspaces') go('dashboard');
   };
 
   window.switchWorkspace = async function (id) {
