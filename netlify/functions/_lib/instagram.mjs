@@ -15,7 +15,6 @@ export function authorizeUrl(redirectUri, state) {
     response_type: 'code',
     scope: SCOPES.join(','),
     state,
-    force_reauth: 'true',
   });
   return `https://www.instagram.com/oauth/authorize?${p}`;
 }
