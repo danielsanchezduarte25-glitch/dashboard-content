@@ -78,6 +78,8 @@ async function handle(body) {
           const sample = [...known, item.views].filter(Boolean);
           if (sample.length >= 3) { const med = median(sample); item.x = +((item.views || 0) / med).toFixed(1); item.score = scoreFor(item, med); }
           else { item.x = null; item.score = null; }
+          // Drop an older copy saved without URL (same account + hook) so it does not linger as a duplicate.
+          for (let i = items.length - 1; i >= 0; i--) if (!items[i].url && items[i].account === acc && items[i].hook === item.hook) items.splice(i, 1);
           if (!items.some((b) => b.url === item.url)) { items.unshift(item); added.push(item); }
         }
         // Re-score every manually added video of the touched accounts with the updated median.
@@ -92,13 +94,14 @@ async function handle(body) {
       case 'transcript': {
         const items = (await getJSON(K.bangers, [])) || [];
         const b = items.find((x) => x.id === body.id); if (!b) fail('No encontrado', 404);
+        if (!b.url) fail('Este reel se guardó sin URL (versión anterior). Quitalo y volvé a pegar el link en “Agregar reels por URL”.', 400);
         if (!b.transcript) { const t = await transcribeUrl(b.url); b.transcript = t.text; await setJSON(K.bangers, items); }
         return { id: b.id, transcript: b.transcript };
       }
       case 'adapt': {
         const items = (await getJSON(K.bangers, [])) || [];
         const b = items.find((x) => x.id === body.id); if (!b) fail('No encontrado', 404);
-        if (!b.transcript) { try { b.transcript = (await transcribeUrl(b.url)).text; } catch { /* optional */ } }
+        if (!b.transcript && b.url) { try { b.transcript = (await transcribeUrl(b.url)).text; } catch { /* optional */ } }
         const ctx = await buildContext();
         const prompt = `Adaptá este video viral de ${b.account} a la marca de ${ctx.brand.handle}. No copies: tomá la MECÁNICA que lo hizo funcionar y reescribila con la audiencia, el tono y los temas de la marca.
 
@@ -127,7 +130,7 @@ function toItem(m, acc) {
     id: randomUUID(), account: acc, platform: m.platform || 'instagram', url: m.url,
     hook: (m.title || m.description || '').split('\n')[0].slice(0, 160) || '(sin caption)',
     caption: m.description || m.title || '', thumbnail: m.media?.thumbnailUrl || m.media?.url || null,
-    views: m.stats?.views ?? null, likes: m.stats?.likes ?? 0, comments: m.stats?.comments ?? 0, shares: m.stats?.shares ?? null,
+    views: m.stats?.views ?? m.stats?.plays ?? m.stats?.playCount ?? m.stats?.viewCount ?? m.stats?.videoViewCount ?? null, likes: m.stats?.likes ?? 0, comments: m.stats?.comments ?? 0, shares: m.stats?.shares ?? null,
     date: (m.createdAt || '').slice(0, 10), duration: m.media?.duration ?? null, added: new Date().toISOString(),
   };
 }

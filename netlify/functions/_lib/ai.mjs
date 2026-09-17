@@ -82,7 +82,8 @@ export async function mediaMetadata(url) {
   const res = await fetch(`https://api.supadata.ai/v1/metadata?url=${encodeURIComponent(url)}`, { headers: { 'x-api-key': key } });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw Object.assign(new Error(`Supadata metadata: ${data?.message || res.status}`), { status: 502 });
-  return data;
+  // Supadata does not echo the URL back: keep the one we asked for (needed later to transcribe/open).
+  return { ...data, url: data.url || url };
 }
 
 // ---- Context builders -------------------------------------------------------

@@ -1,10 +1,11 @@
 // Persistence on Netlify Blobs (no external database needed).
 import { getStore } from '@netlify/blobs';
 
-let _store;
+// IMPORTANT: never cache the store across invocations. Netlify injects a short-lived Blobs token
+// per request; a warm Lambda that reuses an old client fails with "Failed to decode token: Token
+// expired" (seen as "error decoding lambda response" in the browser).
 function store() {
-  if (!_store) _store = getStore({ name: 'dashboard-content', consistency: 'strong' });
-  return _store;
+  return getStore({ name: 'dashboard-content', consistency: 'strong' });
 }
 
 // ---- Workspaces: every key is scoped to the current workspace ("main" = the owner, keeps the
