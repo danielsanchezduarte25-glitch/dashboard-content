@@ -3,7 +3,7 @@ import { json, error, readJSON, env, median, mapLimit } from './_lib/http.mjs';
 import { handlers, runAsJob } from './_lib/jobs.mjs';
 import { requireAuth } from './_lib/auth.mjs';
 import { getJSON, setJSON, K } from './_lib/store.mjs';
-import { claude, mediaMetadata, transcribeUrl, buildContext, systemPrompt } from './_lib/ai.mjs';
+import { claude, extractJSON, mediaMetadata, transcribeUrl, buildContext, systemPrompt } from './_lib/ai.mjs';
 
 /*
  Banger Hunter.
@@ -96,7 +96,15 @@ async function handle(body) {
         const b = items.find((x) => x.id === body.id); if (!b) fail('No encontrado', 404);
         if (!b.url) fail('Este reel se guardó sin URL (versión anterior). Quitalo y volvé a pegar el link en “Agregar reels por URL”.', 400);
         if (!b.transcript) { const t = await transcribeUrl(b.url); b.transcript = t.text; await setJSON(K.bangers, items); }
-        return { id: b.id, transcript: b.transcript };
+        // Structure the literal transcript into Hook / Desarrollo / CTA (no rewriting) so it reads like a script.
+        if (b.transcript && !b.segments && env('ANTHROPIC_API_KEY')) {
+          try {
+            const text = await claude({ system: 'Sos editor de guiones. Recibís la transcripción literal de un reel y la separás en bloques SIN cambiar ni una palabra: hook (los primeros 1-3 segundos, la frase de apertura), desarrollo (todo el cuerpo) y cta (el llamado a la acción final; si no hay, cadena vacía). Podés dividir el desarrollo en párrafos con \\n donde cambia la idea. Respondé SOLO JSON.', messages: [{ role: 'user', content: `TRANSCRIPCIÓN:\n"""${b.transcript.slice(0, 6000)}"""\n\nDevolvé SOLO este JSON: {"hook":"…","body":"…","cta":"…","structure":"estructura en una línea con segundos aproximados (ej. 0-3 s gancho · 3-20 s problema y solución · 20-28 s CTA)"}` }], max_tokens: 2500, temperature: 0.1 });
+            const seg = extractJSON(text);
+            if (seg?.body || seg?.hook) { b.segments = seg; await setJSON(K.bangers, items); }
+          } catch (e) { console.warn('segment transcript failed', e.message); }
+        }
+        return { id: b.id, transcript: b.transcript, segments: b.segments || null };
       }
       case 'adapt': {
         const items = (await getJSON(K.bangers, [])) || [];

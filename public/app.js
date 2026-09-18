@@ -365,7 +365,15 @@ function renderBangers() {
 async function deleteBanger(id) { try { const r = await fetch('/api/bangers?id=' + id, { method: 'DELETE' }); S.bangers = { ...S.bangers, ...(await r.json()) }; renderBangers(); } catch (e) { toast(e.message); } }
 async function bangerTranscript(id) {
   openModal(`<h3>Transcripción</h3><div id="btr">${spinner('Transcribiendo con Supadata…')}</div>`);
-  try { const r = await api('/api/bangers', { method: 'POST', body: { action: 'transcript', id }, timeoutMs: 120000 }); $('#btr').innerHTML = `<div class="block transc" style="max-height:400px">${esc(r.transcript || '(vacía)')}</div><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn sm" onclick="copyText(${JSON.stringify(r.transcript || '')})">⧉ Copiar</button></div>`; }
+  try {
+    const r = await api('/api/bangers', { method: 'POST', body: { action: 'transcript', id }, timeoutMs: 120000 });
+    const b = S.bangers.bangers.find((x) => x.id === id); if (b) { b.transcript = r.transcript; b.segments = r.segments; }
+    const s = r.segments;
+    const structured = s ? `<div class="script"><span class="lab">Hook (0–3 s)</span><b>${esc(s.hook || '—')}</b><span class="lab">Desarrollo</span>${esc(s.body || '').split('\n').filter(Boolean).map((p) => `<p style="margin:0 0 8px">${esc(p)}</p>`).join('')}<span class="lab">CTA</span><b>${esc(s.cta || '(sin CTA explícito)')}</b>${s.structure ? `<span class="lab">Estructura</span>${esc(s.structure)}` : ''}</div>` : '';
+    const raw = `<div class="block transc" style="max-height:400px">${esc(r.transcript || '(vacía)')}</div>`;
+    $('#btr').innerHTML = `${structured ? `<p class="sub" style="font-size:13px;margin:0 0 8px">Transcripción literal de <b style="font-family:var(--mono);color:var(--ink)">${esc(b?.account || '')}</b>, separada en bloques (sin reescribir).</p>${structured}<div id="btrRaw" hidden style="margin-top:10px">${raw}</div>` : raw}
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;flex-wrap:wrap">${structured ? `<button class="btn sm ghost" onclick="const x=document.querySelector('#btrRaw');x.hidden=!x.hidden;this.textContent=x.hidden?'Ver texto completo':'Ocultar texto completo'">Ver texto completo</button>` : ''}<button class="btn sm" onclick="copyText(${JSON.stringify(s ? `HOOK\n${s.hook || ''}\n\nDESARROLLO\n${s.body || ''}\n\nCTA\n${s.cta || ''}` : r.transcript || '')})">⧉ Copiar</button><button class="btn sm primary" onclick="closeModal();adaptBanger('${id}')">✦ Adaptar a mi marca</button></div>`;
+  }
   catch (e) { $('#btr').innerHTML = `<div class="block">${esc(e.message)}</div>`; }
 }
 async function adaptBanger(id) {
