@@ -90,8 +90,12 @@ export async function fetchAccountInsights(token) {
       } catch (e) { if (list === attempts.at(-1)) throw e; }
     }
   };
-  const cur = await win(now - 30 * day / 1000, now);
-  let prev = null; try { prev = await win(now - 60 * day / 1000, now - 30 * day / 1000); } catch { /* optional */ }
+  // Instagram's "últimos 30 días" = today (partial) + the 30 previous full days, in the account's local
+  // time (Costa Rica, UTC-6). Align the window to local midnight so the totals match the app.
+  const tz = 6 * 3600; const localMidnight = (t) => Math.floor((t - tz) / 86400) * 86400 + tz;
+  const start = localMidnight(now) - 30 * 86400;
+  const cur = await win(start, now);
+  let prev = null; try { prev = await win(start - 30 * 86400, start); } catch { /* optional */ }
   const data = { fetched_at: new Date().toISOString(), cur, prev };
   await setJSON(K.accountInsights, data);
   return data;
