@@ -4,6 +4,7 @@ import { handlers, runAsJob } from './_lib/jobs.mjs';
 import { requireAuth } from './_lib/auth.mjs';
 import { getJSON, setJSON, K } from './_lib/store.mjs';
 import { claude, extractJSON, mediaMetadata, transcribeUrl, buildContext, systemPrompt } from './_lib/ai.mjs';
+import { cacheThumb } from './thumb.mjs';
 
 /*
  Banger Hunter.
@@ -20,7 +21,7 @@ const THRESHOLD = 80; // viral score ≥ 80 = banger
 
 export default async (req) => {
   const unauth = requireAuth(req); if (unauth) return unauth;
-  const state = async () => json({ refs: (await getJSON(K.refs, [])) || [], bangers: (await getJSON(K.bangers, [])) || [], scanlog: (await getJSON(K.scanLog, [])) || [], providers: { apify: !!env('APIFY_TOKEN'), supadata: !!env('SUPADATA_API_KEY') } });
+  const state = async () => json({ refs: (await getJSON(K.refs, [])) || [], bangers: await migrateThumbs(), scanlog: (await getJSON(K.scanLog, [])) || [], providers: { apify: !!env('APIFY_TOKEN'), supadata: !!env('SUPADATA_API_KEY') } });
   if (req.method === 'GET') return state();
   if (req.method === 'DELETE') {
     const id = new URL(req.url).searchParams.get('id');
@@ -33,6 +34,15 @@ export default async (req) => {
   return runAsJob(req, 'bangers', body);
 };
 handlers.bangers = (body) => handle(body);
+
+// Older items stored the raw CDN link in `thumbnail`; move it to thumbnail_src so the proxy serves it.
+async function migrateThumbs() {
+  const items = (await getJSON(K.bangers, [])) || [];
+  let changed = false;
+  for (const b of items) if (b.thumbnail && /^https?:/.test(b.thumbnail)) { b.thumbnail_src = b.thumbnail_src || b.thumbnail; b.thumbnail = null; changed = true; }
+  if (changed) { await withThumbs(items); await setJSON(K.bangers, items); }
+  return items;
+}
 
 async function fullState() {
   return { refs: (await getJSON(K.refs, [])) || [], bangers: (await getJSON(K.bangers, [])) || [], scanlog: (await getJSON(K.scanLog, [])) || [], providers: { apify: !!env('APIFY_TOKEN'), supadata: !!env('SUPADATA_API_KEY') } };
@@ -88,6 +98,7 @@ async function handle(body) {
           const sample = mine.map((b) => b.views).filter(Boolean);
           if (sample.length >= 3) { const med = median(sample); for (const b of mine) { b.x = +((b.views || 0) / med).toFixed(1); b.score = scoreFor(b, med); } }
         }
+        await withThumbs(added);
         await setJSON(K.bangers, items.slice(0, 300));
         return { added, skipped: metas.filter((m) => m.error), ...(await fullState()) };
       }
@@ -131,13 +142,19 @@ Devolvé SOLO un JSON:
   }
 }
 
+// Copy the (expiring) Instagram thumbnails into our storage so the cards keep their preview.
+async function withThumbs(list) {
+  await mapLimit(list.filter((b) => !b.thumbnail && b.thumbnail_src), 4, async (b) => { b.thumbnail = await cacheThumb(b.id, b.thumbnail_src); });
+  return list;
+}
+
 const norm = (a) => { a = String(a || '').trim().replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/\/.*$/, ''); return a ? (a.startsWith('@') ? a : '@' + a) : ''; };
 
 function toItem(m, acc) {
   return {
     id: randomUUID(), account: acc, platform: m.platform || 'instagram', url: m.url,
     hook: (m.title || m.description || '').split('\n')[0].slice(0, 160) || '(sin caption)',
-    caption: m.description || m.title || '', thumbnail: m.media?.thumbnailUrl || m.media?.url || null,
+    caption: m.description || m.title || '', thumbnail_src: m.media?.thumbnailUrl || m.media?.url || null, thumbnail: null,
     views: m.stats?.views ?? m.stats?.plays ?? m.stats?.playCount ?? m.stats?.viewCount ?? m.stats?.videoViewCount ?? null, likes: m.stats?.likes ?? 0, comments: m.stats?.comments ?? 0, shares: m.stats?.shares ?? null,
     date: (m.createdAt || '').slice(0, 10), duration: m.media?.duration ?? null, added: new Date().toISOString(),
   };
@@ -165,7 +182,7 @@ async function scanAccount(acc, persist) {
   const vids = rows.map((r) => ({
     id: randomUUID(), account: acc, platform: 'instagram', url: r.url || r.inputUrl,
     hook: (r.caption || '').split('\n')[0].slice(0, 160) || '(sin caption)', caption: r.caption || '',
-    thumbnail: r.displayUrl || r.thumbnailUrl || null,
+    thumbnail_src: r.displayUrl || r.thumbnailUrl || null, thumbnail: null,
     views: r.videoPlayCount ?? r.videoViewCount ?? r.playCount ?? null, likes: r.likesCount ?? 0, comments: r.commentsCount ?? 0,
     shares: r.sharesCount ?? null, date: (r.timestamp || '').slice(0, 10), duration: r.videoDuration ?? null, added: new Date().toISOString(),
   })).filter((v) => v.url);
@@ -175,7 +192,11 @@ async function scanAccount(acc, persist) {
   let newBangers = 0;
   if (persist) {
     const items = (await getJSON(K.bangers, [])) || [];
-    for (const b of bangers) if (!items.some((x) => x.url === b.url)) { items.unshift(b); newBangers++; }
+    const fresh = bangers.filter((b) => !items.some((x) => x.url === b.url));
+    // Refresh metrics + missing thumbnails of bangers we already had (CDN links expire).
+    for (const v of vids) { const old = items.find((x) => x.url === v.url); if (!old) continue; Object.assign(old, { views: v.views ?? old.views, likes: v.likes ?? old.likes, comments: v.comments ?? old.comments, x: v.x ?? old.x, score: v.score ?? old.score }); if (!old.thumbnail) { old.thumbnail_src = v.thumbnail_src || old.thumbnail_src; } }
+    await withThumbs([...fresh, ...items.filter((b) => !b.thumbnail && b.thumbnail_src)]);
+    for (const b of fresh) { items.unshift(b); newBangers++; }
     await setJSON(K.bangers, items.slice(0, 300));
   }
   return { account: acc, videos: vids.length, median: med, bangers, newBangers, all: persist ? undefined : vids };
