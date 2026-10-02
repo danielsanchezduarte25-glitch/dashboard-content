@@ -1,10 +1,11 @@
 import { json, error, readJSON } from './_lib/http.mjs';
 import { requireAuth } from './_lib/auth.mjs';
 import { getJSON, setJSON, K } from './_lib/store.mjs';
+import { applyViewsMode } from './_lib/instagram.mjs';
 
 // Generic key/value for the client-side modules (stories, calendar, goals, brand kit).
 // GET /api/data?key=events   PUT /api/data?key=events  { value }
-const ALLOWED = { sequences: K.sequences, events: K.events, goals: K.goals, brandkit: K.brandkit, products: 'sales/products', sales: 'sales/items', ads: 'sales/ads' };
+const ALLOWED = { sequences: K.sequences, events: K.events, goals: K.goals, brandkit: K.brandkit, metrics: K.metrics, products: 'sales/products', sales: 'sales/items', ads: 'sales/ads' };
 const LIMIT = 900 * 1024; // keep each blob under ~1 MB
 
 export default async (req) => {
@@ -16,6 +17,8 @@ export default async (req) => {
     const { value } = await readJSON(req);
     if (JSON.stringify(value ?? null).length > LIMIT) return error('Demasiado grande: guardá imágenes como URL, no embebidas.', 413);
     await setJSON(ALLOWED[key], value);
+    // Switching the views mode re-labels every reel right away (no need to wait for a sync).
+    if (key === 'metrics') { const reels = (await getJSON(K.reels, [])) || []; applyViewsMode(reels, value?.viewsMode === 'organic' ? 'organic' : 'public'); await setJSON(K.reels, reels); }
     return json({ ok: true });
   }
   return error('Método no permitido', 405);

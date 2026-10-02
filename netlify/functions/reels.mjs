@@ -1,6 +1,7 @@
 import { json, median, engagementRate } from './_lib/http.mjs';
 import { requireAuth } from './_lib/auth.mjs';
 import { getJSON, K } from './_lib/store.mjs';
+import { getViewsMode } from './_lib/instagram.mjs';
 
 // Everything the Dashboard and Instagram views need in one call.
 export default async (req) => {
@@ -47,7 +48,7 @@ export default async (req) => {
   };
   return json({
     profile, goals: goals || { followers: 30000, views: 1000000, reelsPerMonth: 16, savesPerReel: 250 },
-    kpis, monthly, median: med, sync: syncMeta || (profile?.synced_at ? { synced_at: profile.synced_at } : null),
+    viewsMode: await getViewsMode(), kpis, monthly, median: med, sync: syncMeta || (profile?.synced_at ? { synced_at: profile.synced_at } : null),
     reels: list.map((r) => ({ ...r, er: engagementRate(r), x: med ? (r.views || 0) / med : null, retention: r.avg_watch_time && r.duration ? Math.min(100, Math.round(r.avg_watch_time / r.duration * 100)) : null, analyzed: analyzed.has(r.id) })),
   });
 };

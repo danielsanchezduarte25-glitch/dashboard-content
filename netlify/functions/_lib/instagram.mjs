@@ -166,7 +166,27 @@ export function normalizeReel(m, ins = {}) {
 // scheduled) reads them at most once every 20 h to save Apify credits; false skips them.
 // Only the newest PUBLIC_LIMIT reels are read (older ones keep their last public count).
 const PUBLIC_LIMIT = Number(env('APIFY_PUBLIC_LIMIT', 40));
+
+// Views mode: 'organic' → only Meta's official numbers (views = organic, promoted flagged by hand);
+// 'public' → Instagram's public counter via Apify (includes paid views, promoted auto-detected).
+export async function getViewsMode() {
+  const m = await getJSON(K.metrics);
+  if (m?.viewsMode === 'organic' || m?.viewsMode === 'public') return m.viewsMode;
+  return env('APIFY_TOKEN') ? 'public' : 'organic';
+}
+// Recompute the headline fields of every reel for the given mode (used on sync and when switching).
+export function applyViewsMode(reels, mode) {
+  for (const r of reels) {
+    if (r.promoted_auto == null && r.promoted != null && r.promoted_manual == null) r.promoted_auto = !!r.promoted; // migrate old flag
+    if (mode === 'organic') r.views = r.views_manual ?? r.views_organic ?? null;
+    else { r.views = Math.max(r.views_public || 0, r.views_organic || 0) || null; if (r.views_manual != null) r.views = Math.max(r.views_manual, r.views || 0); }
+    r.promoted = r.promoted_manual != null ? !!r.promoted_manual : !!r.promoted_auto;
+  }
+  return reels;
+}
+
 export async function syncAll(token, { full = false, publicCounts = 'auto' } = {}) {
+  const mode = await getViewsMode();
   const profile = await fetchProfile(token);
   const media = await fetchAllMedia(token, full ? 400 : 200);
   const reelsOnly = media.filter((m) => m.media_product_type === 'REELS' || m.media_type === 'VIDEO');
@@ -174,7 +194,7 @@ export async function syncAll(token, { full = false, publicCounts = 'auto' } = {
   const prevById = new Map(prev.map((r) => [r.id, r]));
   const prevMeta = (await getJSON(K.syncMeta)) || {};
   const pubAge = prevMeta.public_at ? Date.now() - new Date(prevMeta.public_at).getTime() : Infinity;
-  const wantPub = publicCounts === 'force' || (publicCounts === 'auto' && pubAge > 20 * 3600 * 1000);
+  const wantPub = mode === 'public' && (publicCounts === 'force' || (publicCounts === 'auto' && pubAge > 20 * 3600 * 1000));
   // Public counters in parallel with the insights calls (optional; needs APIFY_TOKEN).
   let pub = null, pubError = null;
   const pubP = wantPub ? fetchPublicCounts(profile.username, Math.min(PUBLIC_LIMIT, reelsOnly.length + 5)).then((m) => { pub = m; }).catch((e) => { pubError = e.message; }) : Promise.resolve();
@@ -195,17 +215,15 @@ export async function syncAll(token, { full = false, publicCounts = 'auto' } = {
       if (p.likes != null) r.likes = Math.max(p.likes, r.likes || 0);
       if (p.comments != null) r.comments = Math.max(p.comments, r.comments || 0);
       // Public counter clearly above organic → the reel had paid distribution.
-      r.promoted = r.views_organic != null && p.views > r.views_organic * 1.15 + 20;
-    } else if (r.views_public != null) {
-      r.views = Math.max(r.views_public, r.views_organic || 0);
+      r.promoted_auto = r.views_organic != null && p.views > r.views_organic * 1.15 + 20;
     }
-    if (r.views_manual != null) r.views = Math.max(r.views_manual, r.views || 0);
   }
+  applyViewsMode(reels, mode);
   reels.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
   await setJSON(K.reels, reels);
   const synced_at = new Date().toISOString();
   const hasPublic = reels.some((r) => r.views_public != null);
-  const meta = { synced_at, count: reels.length, public_counts: hasPublic, public_fresh: !!pub, public_at: pub ? synced_at : prevMeta.public_at || null, public_error: pubError || (wantPub ? null : prevMeta.public_error || null), public_skipped: !wantPub };
+  const meta = { synced_at, count: reels.length, mode, public_counts: mode === 'public' && hasPublic, public_fresh: !!pub, public_at: pub ? synced_at : prevMeta.public_at || null, public_error: mode === 'public' ? (pubError || (wantPub ? null : prevMeta.public_error || null)) : null, public_skipped: !wantPub };
   await setJSON(K.syncMeta, meta);
   return { profile, reels, count: reels.length, synced_at, publicCounts: hasPublic, publicError: pubError };
 }

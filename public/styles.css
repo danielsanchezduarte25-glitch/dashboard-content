@@ -471,3 +471,5 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .ins-week>b{display:block;color:var(--ink);margin:4px 0 8px}
 .ins-week .idea{border-top:1px dashed var(--line);padding:8px 0 4px}
 .ins-week .idea>b{color:var(--ink);display:block}
+label.radio.on{border-color:var(--accent)!important;background:var(--panel2)}
+label.radio input{accent-color:var(--accent)}

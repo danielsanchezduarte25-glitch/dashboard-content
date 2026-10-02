@@ -87,6 +87,7 @@ export const K = {
   events: 'calendar/events',
   goals: 'settings/goals',
   brandkit: 'settings/brandkit',
+  metrics: 'settings/metrics',     // { viewsMode: 'organic' | 'public' } — organic = solo API de Meta, pauta marcada a mano
   oauthState: 'ig/oauth-state',
   workspaces: 'workspaces/list',   // GLOBAL: [ { id, name, handle, pass:{salt,hash}, created } ]
   top5: 'analysis/top5',           // { generatedAt, items:[...] }
