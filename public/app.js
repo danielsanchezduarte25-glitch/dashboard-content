@@ -327,6 +327,11 @@ async function loadBangers() {
   $('#bangerGrid').innerHTML = spinner('Cargando…');
   try { S.bangers = await api('/api/bangers'); } catch (e) { $('#bangerGrid').innerHTML = empty('Error', esc(e.message)); return; }
   renderRefs(); renderBangers(); renderScanLog();
+  // Previews missing (expired Instagram links)? Recover them once in the background.
+  if (!S.thumbsFixed && (S.bangers.bangers || []).some((b) => !b.thumbnail && b.url)) {
+    S.thumbsFixed = true;
+    api('/api/bangers', { method: 'POST', body: { action: 'thumbs' }, timeoutMs: 180000 }).then((r) => { if (r?.bangers) { S.bangers = { ...S.bangers, bangers: r.bangers }; renderBangers(); } }).catch(() => {});
+  }
 }
 function renderRefs() {
   const refs = S.bangers.refs;

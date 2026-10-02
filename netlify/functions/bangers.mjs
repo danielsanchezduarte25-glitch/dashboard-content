@@ -102,6 +102,16 @@ async function handle(body) {
         await setJSON(K.bangers, items.slice(0, 300));
         return { added, skipped: metas.filter((m) => m.error), ...(await fullState()) };
       }
+      case 'thumbs': {
+        // Recover missing previews: fresh thumbnail link via Supadata metadata (works without Apify), then cache it.
+        const items = (await getJSON(K.bangers, [])) || [];
+        const todo = items.filter((b) => !b.thumbnail && b.url).slice(0, 30);
+        await mapLimit(todo, 3, async (b) => {
+          try { const m = await mediaMetadata(b.url); const src = m.media?.thumbnailUrl || m.media?.url; if (src) { b.thumbnail_src = src; b.thumbnail = await cacheThumb(b.id, src); } } catch { /* keep gradient */ }
+        });
+        await setJSON(K.bangers, items);
+        return { fixed: todo.filter((b) => b.thumbnail).length, ...(await fullState()) };
+      }
       case 'transcript': {
         const items = (await getJSON(K.bangers, [])) || [];
         const b = items.find((x) => x.id === body.id); if (!b) fail('No encontrado', 404);
