@@ -5,7 +5,9 @@
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const fmt = (n) => n == null || Number.isNaN(n) ? 'N/A' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(Math.round(n));
+// Same rounding as Instagram: exact (with thousands separator) below 10,000; 125.5k / 1.2M above.
+const fmt = (n) => n == null || Number.isNaN(n) ? 'N/A' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toLocaleString('es');
+const fmtExact = (n) => n == null || Number.isNaN(n) ? 'N/A' : Math.round(n).toLocaleString('es');
 const pct = (a, b) => (b ? (a / b * 100).toFixed(1) : '0.0') + '%';
 const fdate = (d) => { if (!d) return '—'; const [y, m, dd] = String(d).slice(0, 10).split('-'); return `${+dd}/${+m}/${y}`; };
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -184,7 +186,7 @@ function renderDashboard() {
   const exactT = k.accountInsights ? 'Dato de cuenta de la API de Meta, misma ventana que “Tu panel” en Instagram (últimos 30 días)' : 'Suma de los reels publicados en los últimos 30 días (conectá/sincronizá para el dato exacto de cuenta)';
   const cls = (v) => (v == null ? '' : v >= 0 ? 'up' : 'down');
   const kp = [
-    { l: 'Seguidores', v: fmt(k.followers), d: k.followersDelta == null ? '<span class="vs">histórico desde hoy</span>' : `${k.followersDelta >= 0 ? '+' : ''}${k.followersDelta} <span class="vs">últimos 30 días</span>`, c: cls(k.followersDelta ?? 0), ic: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>' },
+    { l: 'Seguidores', v: fmtExact(k.followers), d: k.followersDelta == null ? '<span class="vs">histórico desde hoy</span>' : `${k.followersDelta >= 0 ? '+' : ''}${k.followersDelta} <span class="vs">últimos 30 días</span>`, c: cls(k.followersDelta ?? 0), ic: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>' },
     { l: 'Visualizaciones · 30 días', t: exactT, v: fmt(k.views30), d: delta(k.viewsDelta), c: cls(k.viewsDelta), ic: svgI.eye },
     { l: 'Alcance · 30 días', t: exactT, v: fmt(k.reach30), d: delta(k.reachDelta), c: cls(k.reachDelta), ic: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>' },
     { l: k.interactions30 != null ? 'Interacciones · 30 días' : 'Engagement rate', t: k.interactions30 != null ? 'Likes + comentarios + guardados + compartidos (dato de cuenta de Meta)' : '', v: k.interactions30 != null ? fmt(k.interactions30) : k.er.toFixed(1) + '%', d: k.interactions30 != null ? delta(k.interactionsDelta) : '<span class="vs">promedio por reel</span>', c: k.interactions30 != null ? cls(k.interactionsDelta) : 'up', ic: '<svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>' },
