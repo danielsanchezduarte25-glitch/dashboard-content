@@ -74,6 +74,29 @@ export async function fetchProfile(token) {
   return profile;
 }
 
+// Account-level insights for the same windows Instagram shows in "Tu panel" (last 30 days vs the
+// 30 before). These are the numbers that match the app's professional dashboard exactly.
+const ACC_METRICS = ['views', 'reach', 'total_interactions', 'accounts_engaged', 'likes', 'comments', 'shares', 'saves', 'profile_views', 'follows_and_unfollows'];
+export async function fetchAccountInsights(token) {
+  const day = 86400000; const now = Math.floor(Date.now() / 1000);
+  const win = async (since, until) => {
+    const attempts = [ACC_METRICS, ACC_METRICS.filter((m) => !['profile_views', 'follows_and_unfollows'].includes(m)), ['reach', 'total_interactions', 'likes', 'comments', 'shares', 'saves']];
+    for (const list of attempts) {
+      try {
+        const r = await igFetch(`${GRAPH}/${VER}/me/insights?metric=${list.join(',')}&period=day&metric_type=total_value&since=${since}&until=${until}&access_token=${encodeURIComponent(token.access_token)}`);
+        const out = { since: new Date(since * 1000).toISOString().slice(0, 10), until: new Date(until * 1000).toISOString().slice(0, 10) };
+        for (const m of r.data || []) out[m.name] = m.total_value?.value ?? (m.values || []).reduce((a, v) => a + (Number(v.value) || 0), 0);
+        return out;
+      } catch (e) { if (list === attempts.at(-1)) throw e; }
+    }
+  };
+  const cur = await win(now - 30 * day / 1000, now);
+  let prev = null; try { prev = await win(now - 60 * day / 1000, now - 30 * day / 1000); } catch { /* optional */ }
+  const data = { fetched_at: new Date().toISOString(), cur, prev };
+  await setJSON(K.accountInsights, data);
+  return data;
+}
+
 export async function fetchAllMedia(token, max = 200) {
   const fields = 'id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count';
   let url = `${GRAPH}/${VER}/me/media?fields=${fields}&limit=50&access_token=${encodeURIComponent(token.access_token)}`;
@@ -188,6 +211,7 @@ export function applyViewsMode(reels, mode) {
 export async function syncAll(token, { full = false, publicCounts = 'auto' } = {}) {
   const mode = await getViewsMode();
   const profile = await fetchProfile(token);
+  try { await fetchAccountInsights(token); } catch (e) { console.warn('account insights failed', e.message); }
   const media = await fetchAllMedia(token, full ? 400 : 200);
   const reelsOnly = media.filter((m) => m.media_product_type === 'REELS' || m.media_type === 'VIDEO');
   const prev = (await getJSON(K.reels, [])) || [];

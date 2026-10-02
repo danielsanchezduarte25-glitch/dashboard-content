@@ -6,8 +6,8 @@ import { getViewsMode } from './_lib/instagram.mjs';
 // Everything the Dashboard and Instagram views need in one call.
 export default async (req) => {
   const unauth = requireAuth(req); if (unauth) return unauth;
-  const [reels, profile, followers, goals, syncMeta] = await Promise.all([
-    getJSON(K.reels, []), getJSON(K.profile), getJSON(K.followerHistory, []), getJSON(K.goals), getJSON(K.syncMeta),
+  const [reels, profile, followers, goals, syncMeta, acc] = await Promise.all([
+    getJSON(K.reels, []), getJSON(K.profile), getJSON(K.followerHistory, []), getJSON(K.goals), getJSON(K.syncMeta), getJSON(K.accountInsights),
   ]);
   const list = reels || [];
   const med = median(list.map((r) => r.views).filter(Boolean));
@@ -33,13 +33,26 @@ export default async (req) => {
     monthly.push({ month: key, reach: sum(rs, 'reach'), views: sum(rs, 'views'), reels: rs.length });
   }
 
+  // Rolling 30-day windows (same as Instagram's "Tu panel: últimos 30 días"). Account-level insights
+  // from the API are exact; when missing we approximate from the reels published in the window.
+  const ms30 = 30 * 86400000; const t30 = Date.now() - ms30, t60 = Date.now() - 2 * ms30;
+  const inWin = (a, b) => list.filter((r) => { const t = new Date(r.timestamp || r.date).getTime(); return t >= a && t < b; });
+  const w30 = inWin(t30, Infinity), w60 = inWin(t60, t30);
+  const A = acc?.cur || null, P = acc?.prev || null;
+  const pick = (k, fallbackKey) => ({ v: A?.[k] ?? sum(w30, fallbackKey), p: P?.[k] ?? sum(w60, fallbackKey), exact: A?.[k] != null });
+  const V = pick('views', 'views'), R = pick('reach', 'reach'), S = pick('saves', 'saves'), SH = pick('shares', 'shares'), I = pick('total_interactions', null);
   const kpis = {
     followers: profile?.followers_count ?? null,
     followersDelta: followers?.length > 1 ? followers[followers.length - 1].count - followers[Math.max(0, followers.length - 31)].count : null,
-    reachTotal: sum(list, 'reach'), reachDelta: pctChange(sum(cur, 'reach'), sum(prev, 'reach')),
-    savesTotal: sum(list, 'saves'), savesDelta: pctChange(sum(cur, 'saves'), sum(prev, 'saves')),
-    viewsTotal: sum(list, 'views'),
-    sharesTotal: sum(list, 'shares'), sharesDelta: pctChange(sum(cur, 'shares'), sum(prev, 'shares')),
+    window: 30, accountInsights: !!A, insightsAt: acc?.fetched_at || null,
+    views30: V.v, viewsDelta: pctChange(V.v, V.p),
+    reach30: R.v, reachDelta: pctChange(R.v, R.p),
+    interactions30: A ? I.v : null, interactionsDelta: A ? pctChange(I.v, I.p) : null,
+    accountsEngaged30: A?.accounts_engaged ?? null, profileViews30: A?.profile_views ?? null, follows30: A?.follows_and_unfollows ?? null,
+    saves30: S.v, savesDelta: pctChange(S.v, S.p),
+    shares30: SH.v, sharesDelta: pctChange(SH.v, SH.p),
+    // all-time totals (goals card, reports)
+    reachTotal: sum(list, 'reach'), savesTotal: sum(list, 'saves'), viewsTotal: sum(list, 'views'), sharesTotal: sum(list, 'shares'),
     er: list.length ? list.reduce((a, r) => a + engagementRate(r), 0) / list.length : 0,
     reelsPublished: list.length, reelsThisMonth: cur.length, reelsDelta: pctChange(cur.length, prev.length),
     medianViews: med,

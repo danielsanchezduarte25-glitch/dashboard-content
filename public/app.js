@@ -180,17 +180,18 @@ function renderDashboard() {
   const sy = d.sync || {};
   const pubState = (d.viewsMode === 'organic') ? `<span title="Modo orgánico: todas las métricas vienen de la API oficial de Meta. Los reels pautados se marcan a mano (detalle del reel) y se muestran con la etiqueta Pautado.">vistas orgánicas · Meta API ✓</span>` : sy.public_error ? `<span class="pill warn" title="${esc(sy.public_error)}. Mientras tanto se muestran las vistas orgánicas de la API de Meta: los reels pautados se ven más bajos que en Instagram.">⚠ vistas públicas no actualizadas${sy.public_at ? ' desde ' + new Date(sy.public_at).toLocaleDateString('es') : ''}</span>` : sy.public_counts ? `<span title="Las vistas se leen del contador público de Instagram (incluye promociones), igual que en la app${sy.public_at ? '. Última lectura ' + new Date(sy.public_at).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' }) : ''}">vistas = Instagram ✓</span>` : '<span title="Solo métricas orgánicas de la API de Meta. Con APIFY_TOKEN se leen las vistas públicas (incluyen promociones)">vistas orgánicas</span>';
   $('#syncedAt').innerHTML = syncAt ? `Última sincronización: ${new Date(syncAt).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })} · ${pubState}` : '';
-  const delta = (v, suffix = '% vs mes pasado') => v == null ? '<span class="vs">sin mes anterior</span>' : `${v > 0 ? '+' : ''}${v}${suffix}`;
+  const delta = (v, suffix = '% vs 30 días previos') => v == null ? '<span class="vs">sin período anterior</span>' : `${v > 0 ? '+' : ''}${v}${suffix}`;
+  const exactT = k.accountInsights ? 'Dato de cuenta de la API de Meta, misma ventana que “Tu panel” en Instagram (últimos 30 días)' : 'Suma de los reels publicados en los últimos 30 días (conectá/sincronizá para el dato exacto de cuenta)';
   const cls = (v) => (v == null ? '' : v >= 0 ? 'up' : 'down');
   const kp = [
     { l: 'Seguidores', v: fmt(k.followers), d: k.followersDelta == null ? '<span class="vs">histórico desde hoy</span>' : `${k.followersDelta >= 0 ? '+' : ''}${k.followersDelta} <span class="vs">últimos 30 días</span>`, c: cls(k.followersDelta ?? 0), ic: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>' },
-    { l: 'Reach total', v: fmt(k.reachTotal), d: delta(k.reachDelta), c: cls(k.reachDelta), ic: svgI.eye },
-    { l: 'Total guardados', v: fmt(k.savesTotal), d: delta(k.savesDelta), c: cls(k.savesDelta), ic: svgI.save },
-    { l: 'Engagement rate', v: k.er.toFixed(1) + '%', d: '<span class="vs">promedio por reel</span>', c: 'up', ic: '<svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>' },
-    { l: 'Reels publicados', v: k.reelsPublished, d: `${k.reelsThisMonth} este mes · ${d.reels.filter((r) => r.promoted).length} pautados`, c: cls(k.reelsDelta), ic: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>' },
+    { l: 'Visualizaciones · 30 días', t: exactT, v: fmt(k.views30), d: delta(k.viewsDelta), c: cls(k.viewsDelta), ic: svgI.eye },
+    { l: 'Alcance · 30 días', t: exactT, v: fmt(k.reach30), d: delta(k.reachDelta), c: cls(k.reachDelta), ic: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>' },
+    { l: k.interactions30 != null ? 'Interacciones · 30 días' : 'Engagement rate', t: k.interactions30 != null ? 'Likes + comentarios + guardados + compartidos (dato de cuenta de Meta)' : '', v: k.interactions30 != null ? fmt(k.interactions30) : k.er.toFixed(1) + '%', d: k.interactions30 != null ? delta(k.interactionsDelta) : '<span class="vs">promedio por reel</span>', c: k.interactions30 != null ? cls(k.interactionsDelta) : 'up', ic: '<svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>' },
+    { l: 'Reels publicados', v: k.reelsPublished, d: `${k.reelsThisMonth} este mes · ${d.reels.filter((r) => r.promoted).length} pautados`, c: 'up', ic: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>' },
     { l: 'Mediana de vistas', v: fmt(k.medianViews), d: '<span class="vs">referencia para el ×</span>', c: 'up', ic: '<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>' },
-    { l: 'Compartidos', v: fmt(k.sharesTotal), d: delta(k.sharesDelta), c: cls(k.sharesDelta), ic: '<svg viewBox="0 0 24 24"><path d="M4 12v8h16v-8M12 3v13M8 7l4-4 4 4"/></svg>' },
-    { l: 'Mejor horario', v: k.bestHour || '—', d: '<span class="vs">hora local con más reach</span>', c: 'up', ic: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' },
+    { l: 'Compartidos · 30 días', t: exactT, v: fmt(k.shares30), d: delta(k.sharesDelta), c: cls(k.sharesDelta), ic: '<svg viewBox="0 0 24 24"><path d="M4 12v8h16v-8M12 3v13M8 7l4-4 4 4"/></svg>' },
+    { l: 'Guardados · 30 días', t: exactT, v: fmt(k.saves30), d: delta(k.savesDelta), c: cls(k.savesDelta), ic: svgI.save },
   ];
   const monthName = (ym) => ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][+ym.slice(5, 7) - 1];
   const gl = [
@@ -201,7 +202,7 @@ function renderDashboard() {
   ];
   const rec = d.reels.slice(0, 8);
   $('#dashBody').innerHTML = `
-  <div class="grid kpis">${kp.map((x) => `<div class="card kpi"><div class="eyebrow">${x.l}${x.ic}</div><div class="num">${x.v}</div><div class="delta ${x.c}">${x.d}</div></div>`).join('')}</div>
+  <div class="grid kpis">${kp.map((x) => `<div class="card kpi" ${x.t ? `title="${esc(x.t)}"` : ''}><div class="eyebrow">${x.l}${x.ic}</div><div class="num">${x.v}</div><div class="delta ${x.c}">${x.d}</div></div>`).join('')}</div>
   <div class="grid row2" style="margin-top:14px">
     <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div><div class="eyebrow">Reach mes a mes</div><h2 style="margin-top:4px">Alcance de los reels por mes de publicación</h2></div><span class="pill">${monthName(d.monthly[0].month)} – ${monthName(d.monthly[d.monthly.length - 1].month)}</span></div><svg class="chart" id="reachChart" viewBox="0 0 640 260" preserveAspectRatio="none"></svg></div>
     <div class="card"><div class="eyebrow">Objetivos del mes</div><h2 style="margin-top:4px">${new Date().toLocaleString('es', { month: 'long' }).replace(/^./, (c) => c.toUpperCase())}</h2>${gl.map((g) => `<div class="goal"><div class="lbl"><span>${g.l}</span><span>${fmt(g.a)} / ${fmt(g.b)}</span></div><div class="bar"><i style="width:${Math.min(100, g.b ? g.a / g.b * 100 : 0).toFixed(1)}%"></i></div><small>${pct(g.a, g.b)} del objetivo · ${g.n}</small></div>`).join('')}<div style="margin-top:12px"><button class="btn sm ghost" onclick="go('ajustes')">Editar objetivos →</button></div></div>
