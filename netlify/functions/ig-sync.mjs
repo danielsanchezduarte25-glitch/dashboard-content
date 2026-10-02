@@ -16,15 +16,16 @@ export default async (req) => {
   const token = await getToken();
   if (!token) return error('Instagram no está conectado.', 409);
   const full = new URL(req.url).searchParams.get('full') === '1';
+  const pub = new URL(req.url).searchParams.get('pub') === '1'; // manual sync → always refresh public counters
   const meta = (await getJSON(K.syncMeta)) || {};
   // Already running (started < 3 min ago)? Just report it.
   if (meta.running && meta.started_at && Date.now() - new Date(meta.started_at).getTime() < 180000) return json({ started: true, since: meta.synced_at || null, already: true });
   await setJSON(K.syncMeta, { ...meta, running: true, started_at: new Date().toISOString(), error: null });
   const local = env('NETLIFY_DEV') || env('NODE_ENV') === 'test' || !env('URL');
-  if (local) { await runSync({ full }); return json({ started: true, since: meta.synced_at || null, inline: true }); }
+  if (local) { await runSync({ full, publicCounts: pub ? 'force' : 'auto' }); return json({ started: true, since: meta.synced_at || null, inline: true }); }
   // Fire the background function without waiting for it (Netlify answers 202 right away).
   try {
-    await fetch(`${siteUrl(req)}/api/ig/sync-background?ws=${getWorkspace()}${full ? '&full=1' : ''}`, { method: 'POST', headers: { 'x-sync-secret': internalSecret() } });
+    await fetch(`${siteUrl(req)}/api/ig/sync-background?ws=${getWorkspace()}${full ? '&full=1' : ''}${pub ? '&pub=1' : ''}`, { method: 'POST', headers: { 'x-sync-secret': internalSecret() } });
   } catch (e) {
     await setJSON(K.syncMeta, { ...meta, running: false, error: 'No se pudo iniciar la sincronización: ' + e.message });
     return error('No se pudo iniciar la sincronización: ' + e.message, 502);

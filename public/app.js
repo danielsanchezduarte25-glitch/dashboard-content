@@ -136,7 +136,7 @@ async function syncReels(full = false, { silent = false } = {}) {
   const btn = $('#syncBtn'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Sincronizando…';
   const restore = () => { S.syncing = false; btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>Sincronizar'; };
   try {
-    const start = await api('/api/ig/sync' + (full ? '?full=1' : ''), { method: 'POST', timeoutMs: 120000 });
+    const start = await api('/api/ig/sync?' + new URLSearchParams({ ...(full ? { full: '1' } : {}), ...(silent ? {} : { pub: '1' }) }), { method: 'POST', timeoutMs: 120000 });
     if (!silent) toast('Sincronizando con Instagram… (tarda 20–60 s)', 3000);
     // The sync runs in the background: poll until synced_at moves or an error is reported.
     let st = null;
@@ -159,7 +159,8 @@ async function syncReels(full = false, { silent = false } = {}) {
 function maybeAutoSync() {
   const at = S.reels?.sync?.synced_at || S.reels?.profile?.synced_at;
   if (!S.me?.instagram?.connected) return;
-  if (!at || Date.now() - new Date(at).getTime() > 6 * 3600 * 1000) syncReels(false, { silent: true });
+  // Refresh quietly when the data is older than 45 min (the server also syncs every 4 h on its own).
+  if (!at || Date.now() - new Date(at).getTime() > 45 * 60 * 1000) syncReels(false, { silent: true });
 }
 $('#syncBtn').addEventListener('click', () => syncReels(false));
 function connectInstagram() {
@@ -176,7 +177,9 @@ function renderDashboard() {
   }
   if (!d.reels.length) { $('#dashBody').innerHTML = empty('Todavía no hay reels sincronizados', 'Tocá “Sincronizar” para traer tus reels y sus métricas.', `<button class="btn primary" onclick="syncReels()">Sincronizar ahora</button>`); return; }
   const syncAt = d.sync?.synced_at || d.profile?.synced_at;
-  $('#syncedAt').innerHTML = syncAt ? `Última sincronización: ${new Date(syncAt).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })}${d.sync?.public_counts ? ' · <span title="Las vistas se leen del contador público de Instagram (incluye promociones), igual que en la app">vistas = Instagram ✓</span>' : ' · <span title="Solo métricas orgánicas de la API de Meta. Con APIFY_TOKEN se leen las vistas públicas (incluyen promociones)">vistas orgánicas</span>'}` : '';
+  const sy = d.sync || {};
+  const pubState = sy.public_error ? `<span class="pill warn" title="${esc(sy.public_error)}. Mientras tanto se muestran las vistas orgánicas de la API de Meta: los reels pautados se ven más bajos que en Instagram.">⚠ vistas públicas no actualizadas${sy.public_at ? ' desde ' + new Date(sy.public_at).toLocaleDateString('es') : ''}</span>` : sy.public_counts ? `<span title="Las vistas se leen del contador público de Instagram (incluye promociones), igual que en la app${sy.public_at ? '. Última lectura ' + new Date(sy.public_at).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' }) : ''}">vistas = Instagram ✓</span>` : '<span title="Solo métricas orgánicas de la API de Meta. Con APIFY_TOKEN se leen las vistas públicas (incluyen promociones)">vistas orgánicas</span>';
+  $('#syncedAt').innerHTML = syncAt ? `Última sincronización: ${new Date(syncAt).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })} · ${pubState}` : '';
   const delta = (v, suffix = '% vs mes pasado') => v == null ? '<span class="vs">sin mes anterior</span>' : `${v > 0 ? '+' : ''}${v}${suffix}`;
   const cls = (v) => (v == null ? '' : v >= 0 ? 'up' : 'down');
   const kp = [

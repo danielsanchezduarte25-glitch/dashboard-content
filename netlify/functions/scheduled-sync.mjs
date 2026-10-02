@@ -1,5 +1,5 @@
-// Scheduled sync: every day at 06:00 Costa Rica (12:00 UTC) the dashboard refreshes profile,
-// insights and the public counters on its own. It only kicks the background function
+// Scheduled sync: every 4 hours the dashboard refreshes profile and insights on its own; the public
+// counters (Apify, paid) are refreshed at most once a day by syncAll('auto'). It only kicks the background function
 // (scheduled functions must finish fast; the background one may run up to 15 min).
 import { env } from './_lib/http.mjs';
 import { internalSecret } from './ig-sync-background.mjs';
@@ -19,4 +19,4 @@ export default async () => {
   return new Response('ok', { status: 200 });
 };
 
-export const config = { schedule: '0 12 * * *' };
+export const config = { schedule: '0 */4 * * *' };

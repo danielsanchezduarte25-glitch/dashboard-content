@@ -117,7 +117,11 @@ export async function fetchPublicCounts(username, limit = 80) {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ username: [username], resultsLimit: limit }),
   });
-  if (!res.ok) throw new Error(`Apify: HTTP ${res.status}`);
+  if (!res.ok) {
+    const body = (await res.text().catch(() => '')).slice(0, 200);
+    const hint = res.status === 403 || /limit|exceed|credit|insufficient/i.test(body) ? ' — créditos de Apify agotados o token sin permisos (console.apify.com → Billing)' : res.status === 401 ? ' — APIFY_TOKEN inválido' : '';
+    throw new Error(`Apify: HTTP ${res.status}${hint}`);
+  }
   const rows = await res.json();
   const byCode = new Map();
   for (const r of rows) {
@@ -158,15 +162,22 @@ export function normalizeReel(m, ins = {}) {
 
 // Every sync refreshes the insights of ALL reels (numbers must match Instagram exactly, and
 // old reels keep growing). `full` also walks further back in the media list.
-export async function syncAll(token, { full = false } = {}) {
+// publicCounts: 'force' (manual sync button) always reads the public counters; 'auto' (autosync,
+// scheduled) reads them at most once every 20 h to save Apify credits; false skips them.
+// Only the newest PUBLIC_LIMIT reels are read (older ones keep their last public count).
+const PUBLIC_LIMIT = Number(env('APIFY_PUBLIC_LIMIT', 40));
+export async function syncAll(token, { full = false, publicCounts = 'auto' } = {}) {
   const profile = await fetchProfile(token);
   const media = await fetchAllMedia(token, full ? 400 : 200);
   const reelsOnly = media.filter((m) => m.media_product_type === 'REELS' || m.media_type === 'VIDEO');
   const prev = (await getJSON(K.reels, [])) || [];
   const prevById = new Map(prev.map((r) => [r.id, r]));
+  const prevMeta = (await getJSON(K.syncMeta)) || {};
+  const pubAge = prevMeta.public_at ? Date.now() - new Date(prevMeta.public_at).getTime() : Infinity;
+  const wantPub = publicCounts === 'force' || (publicCounts === 'auto' && pubAge > 20 * 3600 * 1000);
   // Public counters in parallel with the insights calls (optional; needs APIFY_TOKEN).
   let pub = null, pubError = null;
-  const pubP = fetchPublicCounts(profile.username, Math.max(60, reelsOnly.length + 10)).then((m) => { pub = m; }).catch((e) => { pubError = e.message; });
+  const pubP = wantPub ? fetchPublicCounts(profile.username, Math.min(PUBLIC_LIMIT, reelsOnly.length + 5)).then((m) => { pub = m; }).catch((e) => { pubError = e.message; }) : Promise.resolve();
   const reels = await mapLimit(reelsOnly, 6, async (m) => {
     const old = prevById.get(m.id);
     const ins = await fetchMediaInsights(token, m);
@@ -193,6 +204,8 @@ export async function syncAll(token, { full = false } = {}) {
   reels.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
   await setJSON(K.reels, reels);
   const synced_at = new Date().toISOString();
-  await setJSON(K.syncMeta, { synced_at, public_counts: !!pub, public_error: pubError, count: reels.length });
-  return { profile, reels, count: reels.length, synced_at, publicCounts: !!pub, publicError: pubError };
+  const hasPublic = reels.some((r) => r.views_public != null);
+  const meta = { synced_at, count: reels.length, public_counts: hasPublic, public_fresh: !!pub, public_at: pub ? synced_at : prevMeta.public_at || null, public_error: pubError || (wantPub ? null : prevMeta.public_error || null), public_skipped: !wantPub };
+  await setJSON(K.syncMeta, meta);
+  return { profile, reels, count: reels.length, synced_at, publicCounts: hasPublic, publicError: pubError };
 }

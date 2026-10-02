@@ -9,13 +9,13 @@ import { getJSON, setJSON, del, setWorkspace, K } from './_lib/store.mjs';
 
 export const internalSecret = () => createHmac('sha256', env('SESSION_SECRET') || env('APP_PASSWORD') || 'dev').update('internal-sync').digest('hex');
 
-export async function runSync({ full = false } = {}) {
+export async function runSync({ full = false, publicCounts = 'auto' } = {}) {
   const token = await getToken();
   if (!token) { await setJSON(K.syncMeta, { ...((await getJSON(K.syncMeta)) || {}), running: false, error: 'Instagram no está conectado.' }); return; }
   const prev = (await getJSON(K.syncMeta)) || {};
   await setJSON(K.syncMeta, { ...prev, running: true, started_at: new Date().toISOString(), error: null });
   try {
-    await syncAll(token, { full });
+    await syncAll(token, { full, publicCounts });
   } catch (e) {
     console.error('sync failed', e.message);
     if (e.status === 400 || e.status === 401) await del(K.igToken);
@@ -30,7 +30,8 @@ export default async (req) => {
   if (!ok) return new Response('unauthorized', { status: 401 });
   if (internal && u.searchParams.get('ws')) setWorkspace(u.searchParams.get('ws'));
   const full = u.searchParams.get('full') === '1';
-  await runSync({ full });
+  const publicCounts = u.searchParams.get('pub') === '1' ? 'force' : 'auto';
+  await runSync({ full, publicCounts });
   return new Response('ok', { status: 200 });
 };
 
