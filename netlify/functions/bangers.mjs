@@ -107,8 +107,11 @@ async function handle(body) {
         const items = (await getJSON(K.bangers, [])) || [];
         const todo = items.filter((b) => !b.thumbnail && b.url).slice(0, 30);
         const diag = [];
-        await mapLimit(todo, 3, async (b) => {
-          try { const m = await mediaMetadata(b.url); const src = m.media?.thumbnailUrl || m.media?.url; if (src) { b.thumbnail_src = src; const r = await cacheThumb(b.id, src); b.thumbnail = r.url; if (!r.url) diag.push({ url: b.url, step: 'fetch', err: r.error, src: src.slice(0, 60) }); } else diag.push({ url: b.url, step: 'meta', err: 'sin thumbnail', keys: Object.keys(m.media || {}) }); }
+        // Supadata rate-limits bursts ("Limit Exceeded"): go one at a time with a short pause and one retry.
+        const metaSlow = async (url) => { for (let i = 0; i < 3; i++) { try { return await mediaMetadata(url); } catch (e) { if (!/Limit Exceeded|429/i.test(e.message) || i === 2) throw e; await new Promise((r) => setTimeout(r, 4000 * (i + 1))); } } };
+        await mapLimit(todo, 1, async (b) => {
+          await new Promise((r) => setTimeout(r, 1200));
+          try { const m = await metaSlow(b.url); const src = m.media?.thumbnailUrl || m.media?.url; if (src) { b.thumbnail_src = src; const r = await cacheThumb(b.id, src); b.thumbnail = r.url; if (!r.url) diag.push({ url: b.url, step: 'fetch', err: r.error, src: src.slice(0, 60) }); } else diag.push({ url: b.url, step: 'meta', err: 'sin thumbnail', keys: Object.keys(m.media || {}) }); }
           catch (e) { diag.push({ url: b.url, step: 'meta', err: e.message }); }
         });
         await setJSON(K.bangers, items);
