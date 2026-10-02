@@ -106,11 +106,13 @@ async function handle(body) {
         // Recover missing previews: fresh thumbnail link via Supadata metadata (works without Apify), then cache it.
         const items = (await getJSON(K.bangers, [])) || [];
         const todo = items.filter((b) => !b.thumbnail && b.url).slice(0, 30);
+        const diag = [];
         await mapLimit(todo, 3, async (b) => {
-          try { const m = await mediaMetadata(b.url); const src = m.media?.thumbnailUrl || m.media?.url; if (src) { b.thumbnail_src = src; b.thumbnail = await cacheThumb(b.id, src); } } catch { /* keep gradient */ }
+          try { const m = await mediaMetadata(b.url); const src = m.media?.thumbnailUrl || m.media?.url; if (src) { b.thumbnail_src = src; const r = await cacheThumb(b.id, src); b.thumbnail = r.url; if (!r.url) diag.push({ url: b.url, step: 'fetch', err: r.error, src: src.slice(0, 60) }); } else diag.push({ url: b.url, step: 'meta', err: 'sin thumbnail', keys: Object.keys(m.media || {}) }); }
+          catch (e) { diag.push({ url: b.url, step: 'meta', err: e.message }); }
         });
         await setJSON(K.bangers, items);
-        return { fixed: todo.filter((b) => b.thumbnail).length, ...(await fullState()) };
+        return { fixed: todo.filter((b) => b.thumbnail).length, diag, ...(await fullState()) };
       }
       case 'transcript': {
         const items = (await getJSON(K.bangers, [])) || [];
@@ -154,7 +156,7 @@ Devolvé SOLO un JSON:
 
 // Copy the (expiring) Instagram thumbnails into our storage so the cards keep their preview.
 async function withThumbs(list) {
-  await mapLimit(list.filter((b) => !b.thumbnail && b.thumbnail_src), 4, async (b) => { b.thumbnail = await cacheThumb(b.id, b.thumbnail_src); });
+  await mapLimit(list.filter((b) => !b.thumbnail && b.thumbnail_src), 4, async (b) => { b.thumbnail = (await cacheThumb(b.id, b.thumbnail_src)).url; });
   return list;
 }
 
